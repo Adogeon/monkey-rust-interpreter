@@ -1,13 +1,12 @@
 pub mod lexer;
+pub mod repl;
 pub mod token;
 
+use std::io::{stdin, stdout};
+
 fn main() {
-    let input = "c;".to_string();
-    let mut l = lexer::Lexer::new(&input);
-    while let token = l.next_token() {
-        println!("{:?}", token);
-        if token.Type == token::T_type::EOF {
-            break;
-        }
-    }
+    println!("Hello! This is the Monkey programming language!");
+    println!("Feel free to type in commands");
+    let input = stdin();
+    repl::start(input.lock(), stdout().lock())
 }

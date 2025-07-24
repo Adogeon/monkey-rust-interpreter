@@ -1,3 +1,5 @@
+use std::fmt::{self, Display};
+
 #[derive(Debug, PartialEq)]
 pub enum T_type {
     ILLEGAL,
@@ -58,5 +60,11 @@ impl Token {
             Type: ttype,
             Literal: literal.to_string(),
         }
+    }
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(Type:{:?}, Literal:{}", self.Type, self.Literal)
     }
 }
