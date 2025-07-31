@@ -1,20 +1,20 @@
 use crate::token::Token;
 use std::boxed::Box;
 
-trait Node {
+pub trait Node {
     fn token_literal(&self) -> Option<&str>;
 }
 
-trait Expression: Node {
+pub trait Expression: Node {
     fn expression_node(&self);
 }
 
-trait Statement: Node {
+pub trait Statement: Node {
     fn statement_node(&self);
 }
 
 pub struct Program {
-    statements: Vec<Box<dyn Statement>>,
+    pub statements: Vec<Box<dyn Statement>>,
 }
 
 impl Node for Program {
@@ -28,8 +28,8 @@ impl Node for Program {
 }
 
 pub struct Identifier {
-    idt_token: Token,
-    value: String,
+    pub idt_token: Token,
+    pub value: String,
 }
 
 impl Node for Identifier {
@@ -43,9 +43,9 @@ impl Expression for Identifier {
 }
 
 pub struct LetStatement {
-    stmt_token: Token,
-    name: Box<Identifier>,
-    value: Box<dyn Expression>,
+    pub stmt_token: Token,
+    pub name: Box<Identifier>,
+    pub value: Box<dyn Expression>,
 }
 
 impl Node for LetStatement {
