@@ -17,7 +17,7 @@ fn is_number(ch: char) -> bool {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(input: &'a String) -> Self {
+    pub fn new(input: &'a str) -> Self {
         let mut iter = input.chars().peekable();
         let current = iter.next();
         Lexer {
@@ -68,47 +68,53 @@ impl<'a> Lexer<'a> {
     pub fn next_token(&mut self) -> Token {
         self.consume_whitespace();
         let tok = match self.ch {
-            Some('+') => Token::new(T_type::PLUS, "+"),
-            Some('-') => Token::new(T_type::MINUS, "-"),
-            Some('*') => Token::new(T_type::ASTERISK, "*"),
-            Some('/') => Token::new(T_type::SLASH, "/"),
-            Some('<') => Token::new(T_type::LT, "<"),
-            Some('>') => Token::new(T_type::GT, ">"),
-            Some(',') => Token::new(T_type::COMMA, ","),
-            Some(';') => Token::new(T_type::SEMICOLON, ";"),
-            Some('(') => Token::new(T_type::LPAREN, "("),
-            Some(')') => Token::new(T_type::RPAREN, ")"),
-            Some('{') => Token::new(T_type::LBRACE, "{"),
-            Some('}') => Token::new(T_type::RBRACE, "}"),
+            Some('+') => Token::new(TType::PLUS, "+"),
+            Some('-') => Token::new(TType::MINUS, "-"),
+            Some('*') => Token::new(TType::ASTERISK, "*"),
+            Some('/') => Token::new(TType::SLASH, "/"),
+            Some('<') => Token::new(TType::LT, "<"),
+            Some('>') => Token::new(TType::GT, ">"),
+            Some(',') => Token::new(TType::COMMA, ","),
+            Some(';') => Token::new(TType::SEMICOLON, ";"),
+            Some('(') => Token::new(TType::LPAREN, "("),
+            Some(')') => Token::new(TType::RPAREN, ")"),
+            Some('{') => Token::new(TType::LBRACE, "{"),
+            Some('}') => Token::new(TType::RBRACE, "}"),
             Some('=') => {
                 if self.peek_next() == Some(&'=') {
                     self.read_char();
-                    Token::new(T_type::EQ, "==")
+                    Token::new(TType::EQ, "==")
                 } else {
-                    Token::new(T_type::ASSIGN, "=")
+                    Token::new(TType::ASSIGN, "=")
                 }
             }
             Some('!') => {
                 if self.peek_next() == Some(&'=') {
                     self.read_char();
-                    Token::new(T_type::NOTEQ, "!=")
+                    Token::new(TType::NOTEQ, "!=")
                 } else {
-                    Token::new(T_type::BANG, "!")
+                    Token::new(TType::BANG, "!")
                 }
             }
             Some(c) => {
                 if is_letter(c) {
                     let literal = self.read_mult_char(is_letter);
                     let token = look_up_ident(&literal);
-                    Token::new(token, literal.as_str())
+                    Token {
+                        tok_type: token,
+                        tok_literal: literal,
+                    }
                 } else if is_number(c) {
                     let literal = self.read_mult_char(is_number);
-                    Token::new(T_type::INT, literal.as_str())
+                    Token {
+                        tok_type: TType::INT,
+                        tok_literal: literal,
+                    }
                 } else {
-                    Token::new(T_type::ILLEGAL, &self.ch.unwrap().to_string())
+                    Token::new(TType::ILLEGAL, &self.ch.unwrap().to_string())
                 }
             }
-            None => Token::new(T_type::EOF, ""),
+            None => Token::new(TType::EOF, ""),
         };
         self.read_char();
         tok

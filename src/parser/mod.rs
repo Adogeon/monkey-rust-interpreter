@@ -1,86 +1,89 @@
 use crate::ast;
 use crate::lexer;
-use crate::token::{self, T_type};
+use crate::token::{self, TType};
 use std::boxed::Box;
 
-pub struct Parser {
-    l: Box<lexer::Lexer>,
+pub struct Parser<'a> {
+    l: lexer::Lexer<'a>,
     cur_token: token::Token,
     peek_token: token::Token,
 }
 
-impl Parser {
-    pub fn next_tok(&self) {
-        self.cur_token = self.peek_token;
+impl<'a> Parser<'a> {
+    pub fn next_tok(&mut self) {
+        self.cur_token = self.peek_token.clone();
         self.peek_token = self.l.next_token();
     }
 
-    pub fn new(&self, l: Box<lexer::Lexer>) -> &Parser {
-        let first_token = self.l.next_token();
-        let p = &Parser {
+    pub fn new(l: lexer::Lexer<'a>) -> Self {
+        let mut p = Parser {
             l: l,
-            cur_token: first_token,
-            peek_token: first_token,
+            cur_token: token::Token::new(TType::EOF, ""),
+            peek_token: token::Token::new(TType::EOF, ""),
         };
         p.next_tok();
+        p.next_tok();
+        p
     }
 
-    pub fn parse_program(&self) -> &ast::Program {
-        let mut program = &mut ast::Program { statements: [] };
+    pub fn parse_program(&mut self) -> Result<ast::Program, ast::ParseError> {
+        let mut program = ast::Program { statements: vec![] };
 
-        while self.cur_token.Type != T_type::EOF {
+        while self.cur_token.tok_type != TType::EOF {
             if let Some(stmt) = self.parse_statement() {
-                program.statements.append(stmt)
+                program.statements.push(stmt);
+            } else {
+                return Err(ast::ParseError::UnexpectedToken);
             }
             self.next_tok()
         }
 
-        return program;
+        Ok(program)
     }
 
     fn parse_statement(&self) -> Option<Box<dyn ast::Statement>> {
-        match (self.cur_token.T_type) {
-            T_type::LET => self.parse_let_stmt(),
+        match (self.cur_token.tok_type) {
+            TType::LET => self.parse_let_stmt(),
             _ => None,
         }
     }
 
-    fn parse_let_stmt(&self) -> Option<&ast::LetStatement> {
+    fn parse_let_stmt(&self) -> Option<Box<dyn ast::Statement>> {
         let stmt_token = self.cur_token;
 
-        if !self.expect_peek(T_type::IDENT) {
-            None
+        if !self.expect_peek(TType::IDENT) {
+            return None;
         }
 
-        let stmt_name = &ast::Identifier {
-            idt_token: self.cur_token,
-            value: self.cur_token.Literal,
+        let stmt_name = ast::Identifier {
+            idt_token: self.cur_token.clone(),
+            value: self.cur_token.tok_literal.clone(),
         };
 
-        if !self.expect_peek(T_type::ASSIGN) {
-            None
+        if !self.expect_peek(TType::ASSIGN) {
+            return None;
         }
 
-        while !self.cur_tok_is(T_type::SEMICOLON) {
-            self.nextToken();
+        while !self.cur_tok_is(TType::SEMICOLON) {
+            self.next_tok();
         }
 
-        &ast::LetStatement {
+        Some(Box::new(ast::LetStatement {
             stmt_token,
-            name: stmt_name,
-            value: stmt_token.Literal,
-        }
+            name: Box::new(stmt_name),
+            value: Box::new(stmt_name),
+        }))
     }
 
-    fn cur_tok_is(&self, t: T_type) -> bool {
-        self.cur_token.Type == t
+    fn cur_tok_is(&self, t: TType) -> bool {
+        self.cur_token.tok_type == t
     }
 
-    fn peek_tok_is(&self, t: T_type) -> bool {
-        self.peek_token.Type == t
+    fn peek_tok_is(&self, t: TType) -> bool {
+        self.peek_token.tok_type == t
     }
 
-    fn expect_peek(&self, t: T_type) -> bool {
+    fn expect_peek(&mut self, t: TType) -> bool {
         if self.peek_tok_is(t) {
             self.next_tok();
             true
@@ -89,3 +92,6 @@ impl Parser {
         }
     }
 }
+
+#[cfg(test)]
+mod test;

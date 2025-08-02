@@ -1,5 +1,5 @@
 use crate::lexer::Lexer;
-use crate::token::T_type;
+use crate::token::TType;
 use std::io::{self, BufRead, Write};
 
 pub fn start(mut in_handler: io::StdinLock, mut out_handler: io::StdoutLock) {
@@ -19,7 +19,7 @@ pub fn start(mut in_handler: io::StdinLock, mut out_handler: io::StdoutLock) {
 
         loop {
             let tok = l.next_token();
-            if tok.Type == T_type::EOF {
+            if tok.tok_type == TType::EOF {
                 break;
             }
             writeln!(out_handler, "Token:{:?}", tok).unwrap();

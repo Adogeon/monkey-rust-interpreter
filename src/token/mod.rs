@@ -1,7 +1,7 @@
 use std::fmt::{self, Display};
 
-#[derive(Debug, PartialEq)]
-pub enum T_type {
+#[derive(Debug, PartialEq, Clone)]
+pub enum TType {
     ILLEGAL,
     EOF,
     // Identifiers + Literals
@@ -35,36 +35,36 @@ pub enum T_type {
     RETURN,
 }
 
-pub fn look_up_ident(ident: &String) -> T_type {
-    match ident.as_str() {
-        "fn" => T_type::FUNCTION,
-        "let" => T_type::LET,
-        "true" => T_type::TRUE,
-        "false" => T_type::FALSE,
-        "if" => T_type::IF,
-        "else" => T_type::ELSE,
-        "return" => T_type::RETURN,
-        _ => T_type::IDENT,
+pub fn look_up_ident(ident: &str) -> TType {
+    match ident {
+        "fn" => TType::FUNCTION,
+        "let" => TType::LET,
+        "true" => TType::TRUE,
+        "false" => TType::FALSE,
+        "if" => TType::IF,
+        "else" => TType::ELSE,
+        "return" => TType::RETURN,
+        _ => TType::IDENT,
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
-    pub Type: T_type,
-    pub Literal: String,
+    pub tok_type: TType,
+    pub tok_literal: String,
 }
 
 impl Token {
-    pub fn new(ttype: T_type, literal: &str) -> Token {
+    pub fn new(ttype: TType, literal: &str) -> Token {
         Token {
-            Type: ttype,
-            Literal: literal.to_string(),
+            tok_type: ttype,
+            tok_literal: literal.to_string(),
         }
     }
 }
 
 impl Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(Type:{:?}, Literal:{}", self.Type, self.Literal)
+        write!(f, "(Type:{:?}, Literal:{}", self.tok_type, self.tok_literal)
     }
 }

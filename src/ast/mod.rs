@@ -32,14 +32,14 @@ pub struct Identifier {
     pub value: String,
 }
 
-impl Node for Identifier {
-    fn token_literal(&self) -> Option<&str> {
-        Some(&self.idt_token.Literal)
-    }
-}
-
 impl Expression for Identifier {
     fn expression_node(&self) {}
+}
+
+impl Node for Identifier {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.idt_token.tok_literal)
+    }
 }
 
 pub struct LetStatement {
@@ -50,10 +50,14 @@ pub struct LetStatement {
 
 impl Node for LetStatement {
     fn token_literal(&self) -> Option<&str> {
-        Some(&self.stmt_token.Literal)
+        Some(&self.stmt_token.tok_literal)
     }
 }
 
 impl Statement for LetStatement {
     fn statement_node(&self) {}
+}
+
+pub enum ParseError {
+    UnexpectedToken,
 }
