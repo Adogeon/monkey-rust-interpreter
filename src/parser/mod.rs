@@ -1,4 +1,4 @@
-use crate::ast;
+use crate::ast::{self, StatementEnum};
 use crate::lexer;
 use crate::token::{self, TType};
 use std::boxed::Box;
@@ -41,24 +41,24 @@ impl<'a> Parser<'a> {
         Ok(program)
     }
 
-    fn parse_statement(&self) -> Option<Box<dyn ast::Statement>> {
-        match (self.cur_token.tok_type) {
+    fn parse_statement(&mut self) -> Option<Box<StatementEnum>> {
+        match self.cur_token.tok_type {
             TType::LET => self.parse_let_stmt(),
             _ => None,
         }
     }
 
-    fn parse_let_stmt(&self) -> Option<Box<dyn ast::Statement>> {
-        let stmt_token = self.cur_token;
+    fn parse_let_stmt(&mut self) -> Option<Box<StatementEnum>> {
+        let stmt_token = self.cur_token.clone();
 
         if !self.expect_peek(TType::IDENT) {
             return None;
         }
 
-        let stmt_name = ast::Identifier {
+        let stmt_name = Box::new(ast::Identifier {
             idt_token: self.cur_token.clone(),
             value: self.cur_token.tok_literal.clone(),
-        };
+        });
 
         if !self.expect_peek(TType::ASSIGN) {
             return None;
@@ -68,11 +68,13 @@ impl<'a> Parser<'a> {
             self.next_tok();
         }
 
-        Some(Box::new(ast::LetStatement {
+        let let_stmt = ast::LetStatement {
             stmt_token,
-            name: Box::new(stmt_name),
-            value: Box::new(stmt_name),
-        }))
+            name: stmt_name,
+            value: Box::new(ast::EmptyValue),
+        };
+
+        Some(Box::new(StatementEnum::LetStmt(let_stmt)))
     }
 
     fn cur_tok_is(&self, t: TType) -> bool {
