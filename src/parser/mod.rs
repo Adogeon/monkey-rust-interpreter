@@ -44,6 +44,7 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Option<Box<StatementEnum>> {
         match self.cur_token.tok_type {
             TType::LET => self.parse_let_stmt(),
+            TType::RETURN => self.parse_return_stmt(),
             _ => None,
         }
     }
@@ -75,6 +76,21 @@ impl<'a> Parser<'a> {
         };
 
         Some(Box::new(StatementEnum::LetStmt(let_stmt)))
+    }
+
+    fn parse_return_stmt(&mut self) -> Option<Box<StatementEnum>> {
+        let ret_stmt = ast::ReturnStatement {
+            stmt_token: self.cur_token.clone(),
+            return_value: Box::new(ast::EmptyValue),
+        };
+
+        self.next_tok();
+
+        while !self.cur_tok_is(TType::SEMICOLON) {
+            self.next_tok();
+        }
+
+        Some(Box::new(StatementEnum::RetStmt(ret_stmt)))
     }
 
     fn cur_tok_is(&self, t: TType) -> bool {
