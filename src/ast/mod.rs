@@ -1,12 +1,10 @@
 use crate::token::Token;
 use std::boxed::Box;
+use std::fmt::Write;
 
 pub trait Node {
     fn token_literal(&self) -> Option<&str>;
-}
-
-pub trait Expression: Node {
-    fn expression_node(&self);
+    fn write_string(&self) -> String;
 }
 
 pub struct EmptyValue;
@@ -15,18 +13,14 @@ impl Node for EmptyValue {
     fn token_literal(&self) -> Option<&str> {
         Some("it's empty")
     }
-}
 
-impl Expression for EmptyValue {
-    fn expression_node(&self) {}
-}
-
-pub trait Statement: Node {
-    fn statement_node(&self);
+    fn write_string(&self) -> String {
+        String::from("<blank>")
+    }
 }
 
 pub struct Program {
-    pub statements: Vec<Box<StatementEnum>>,
+    pub statements: Vec<Box<Statement>>,
 }
 
 impl Node for Program {
@@ -37,6 +31,14 @@ impl Node for Program {
             None
         }
     }
+
+    fn write_string(&self) -> String {
+        let mut buf = String::new();
+        for s in &self.statements {
+            write!(&mut buf, "{}", s.write_string()).unwrap();
+        }
+        buf
+    }
 }
 
 pub struct Identifier {
@@ -44,66 +46,115 @@ pub struct Identifier {
     pub value: String,
 }
 
-impl Expression for Identifier {
-    fn expression_node(&self) {}
-}
-
 impl Node for Identifier {
     fn token_literal(&self) -> Option<&str> {
         Some(&self.idt_token.tok_literal)
+    }
+
+    fn write_string(&self) -> String {
+        self.value.clone()
     }
 }
 
 pub struct LetStatement {
     pub stmt_token: Token,
     pub name: Box<Identifier>,
-    pub value: Box<dyn Expression>,
+    pub value: Option<Box<Expression>>,
 }
 
 impl Node for LetStatement {
     fn token_literal(&self) -> Option<&str> {
         Some(&self.stmt_token.tok_literal)
     }
-}
 
-impl Statement for LetStatement {
-    fn statement_node(&self) {}
+    fn write_string(&self) -> String {
+        let mut buf = String::new();
+
+        write!(&mut buf, "{} ", self.token_literal().unwrap());
+        write!(&mut buf, "{}", self.name.write_string());
+        write!(&mut buf, " = ");
+
+        if let Some(stmt_value) = &self.value {
+            write!(&mut buf, "{}", stmt_value.write_string());
+        }
+        write!(&mut buf, ";");
+        buf
+    }
 }
 
 pub struct ReturnStatement {
     pub stmt_token: Token,
-    pub return_value: Box<dyn Expression>,
+    pub return_value: Option<Box<Expression>>,
 }
 
 impl Node for ReturnStatement {
     fn token_literal(&self) -> Option<&str> {
         Some(&self.stmt_token.tok_literal)
     }
+
+    fn write_string(&self) -> String {
+        let mut buf = String::new();
+        write!(&mut buf, "{} ", self.token_literal().unwrap());
+        if let Some(stmt_value) = &self.return_value {
+            write!(&mut buf, "{}", stmt_value.write_string());
+        }
+        write!(&mut buf, ";");
+        buf
+    }
 }
 
-impl Statement for ReturnStatement {
-    fn statement_node(&self) {}
+pub struct ExpressionStatement {
+    pub stmt_token: Token,
+    pub expression: Box<Expression>,
 }
 
-pub enum StatementEnum {
+impl Node for ExpressionStatement {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.stmt_token.tok_literal)
+    }
+    fn write_string(&self) -> String {
+        String::from("ExpressionStatement still cooking")
+    }
+}
+
+pub enum Statement {
     LetStmt(LetStatement),
     RetStmt(ReturnStatement),
+    ExpStmt(ExpressionStatement),
 }
 
-impl Node for StatementEnum {
+impl Node for Statement {
     fn token_literal(&self) -> Option<&str> {
         match self {
             Self::LetStmt(lst) => lst.token_literal(),
             Self::RetStmt(rst) => rst.token_literal(),
+            Self::ExpStmt(est) => est.token_literal(),
+        }
+    }
+
+    fn write_string(&self) -> String {
+        match self {
+            Self::LetStmt(lst) => lst.write_string(),
+            Self::RetStmt(rst) => rst.write_string(),
+            Self::ExpStmt(est) => est.write_string(),
         }
     }
 }
 
-impl Statement for StatementEnum {
-    fn statement_node(&self) {
+pub enum Expression {
+    Identifier(Identifier),
+}
+
+impl Node for Expression {
+    fn token_literal(&self) -> Option<&str> {
         match self {
-            Self::LetStmt(lst) => lst.statement_node(),
-            Self::RetStmt(rst) => rst.statement_node(),
+            Self::Identifier(ident) => ident.token_literal(),
+        }
+    }
+
+    fn write_string(&self) -> String {
+        match self {
+            Self::Identifier(ident) => ident.write_string(),
         }
     }
 }
@@ -111,3 +162,6 @@ impl Statement for StatementEnum {
 pub enum ParseError {
     UnexpectedToken,
 }
+
+#[cfg(test)]
+mod test;

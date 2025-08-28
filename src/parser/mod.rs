@@ -3,6 +3,16 @@ use crate::lexer;
 use crate::token::{self, TType};
 use std::boxed::Box;
 
+enum Precedent {
+    LOWEST = 0,
+    EQUALS = 1,
+    LESSGREATER = 2,
+    SUM = 3,
+    PRODUCT = 4,
+    PREFIX = 5,
+    CALL = 6,
+}
+
 pub struct Parser<'a> {
     l: lexer::Lexer<'a>,
     cur_token: token::Token,
@@ -51,7 +61,7 @@ impl<'a> Parser<'a> {
 
     fn parse_let_stmt(&mut self) -> Option<Box<StatementEnum>> {
         let stmt_token = self.cur_token.clone();
-
+        let mut stmt_value = None;
         if !self.expect_peek(TType::IDENT) {
             return None;
         }
@@ -72,16 +82,17 @@ impl<'a> Parser<'a> {
         let let_stmt = ast::LetStatement {
             stmt_token,
             name: stmt_name,
-            value: Box::new(ast::EmptyValue),
+            value: stmt_value,
         };
 
         Some(Box::new(StatementEnum::LetStmt(let_stmt)))
     }
 
     fn parse_return_stmt(&mut self) -> Option<Box<StatementEnum>> {
+        let mut stmt_value = None;
         let ret_stmt = ast::ReturnStatement {
             stmt_token: self.cur_token.clone(),
-            return_value: Box::new(ast::EmptyValue),
+            return_value: stmt_value,
         };
 
         self.next_tok();
@@ -108,6 +119,30 @@ impl<'a> Parser<'a> {
         } else {
             false
         }
+    }
+
+    fn prefix_parse_fn(&self, tok_type: &TType) -> Option<Box<dyn ast::Expression>> {
+        match tok_type {
+            TType::IDENT => Some(self.parse_identifier()),
+            _ => None,
+        }
+    }
+
+    fn parse_expression(&self, precedence: Precedent) -> Option<Box<dyn ast::Expression>> {
+        let prefix = self.prefix_parse_fn(&self.cur_token.tok_type);
+
+        if let Some(result) = prefix {
+            let left_exp = result;
+            Some(left_exp)
+        } else {
+            None
+        }
+    }
+
+    fn parse_identifier(&self) -> Option<Box<ast::Identifier>> {
+        let value = self.cur_token.tok_literal.clone();
+        let idt_token = self.cur_token.clone();
+        Some(Box::new(ast::Identifier { idt_token, value }))
     }
 }
 
