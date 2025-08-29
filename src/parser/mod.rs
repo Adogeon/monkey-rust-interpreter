@@ -1,7 +1,8 @@
-use crate::ast::{self, Expression, ParseError, Statement};
+use crate::ast::{self, Expression, Statement};
 use crate::lexer;
 use crate::token::{self, TType};
 use std::boxed::Box;
+use std::fmt::Display;
 
 enum Precedent {
     LOWEST = 0,
@@ -11,6 +12,20 @@ enum Precedent {
     PRODUCT = 4,
     PREFIX = 5,
     CALL = 6,
+}
+
+pub enum ParseError {
+    UnexpectedToken,
+    IntLitParseError(String),
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnexpectedToken => write!(f, "Parser Error - UnexpectedToken"),
+            Self::IntLitParseError(tok_lit) => write!(f, "can't parse {tok_lit} to int"),
+        }
+    }
 }
 
 pub struct Parser<'a> {
@@ -36,14 +51,14 @@ impl<'a> Parser<'a> {
         p
     }
 
-    pub fn parse_program(&mut self) -> Result<ast::Program, ast::ParseError> {
+    pub fn parse_program(&mut self) -> Result<ast::Program, ParseError> {
         let mut program = ast::Program { statements: vec![] };
 
         while self.cur_token.tok_type != TType::EOF {
             if let Some(stmt) = self.parse_statement() {
                 program.statements.push(stmt);
             } else {
-                return Err(ast::ParseError::UnexpectedToken);
+                return Err(ParseError::UnexpectedToken);
             }
             self.next_tok()
         }
@@ -55,7 +70,7 @@ impl<'a> Parser<'a> {
         match self.cur_token.tok_type {
             TType::LET => self.parse_let_stmt(),
             TType::RETURN => self.parse_return_stmt(),
-            _ => None,
+            _ => self.parse_expression_stmt(),
         }
     }
 
@@ -100,6 +115,19 @@ impl<'a> Parser<'a> {
         Some(Statement::RetStmt(ret_stmt))
     }
 
+    fn parse_expression_stmt(&mut self) -> Option<Statement> {
+        let exp_tok = self.cur_token.clone();
+        let express = self.parse_expression(Precedent::LOWEST)?;
+        if self.peek_tok_is(TType::SEMICOLON).is_some() {
+            self.next_tok();
+        }
+
+        Some(Statement::ExpStmt(ast::ExpressionStatement {
+            stmt_token: exp_tok,
+            expression: express,
+        }))
+    }
+
     fn cur_tok_is(&self, t: TType) -> bool {
         self.cur_token.tok_type == t
     }
@@ -118,14 +146,15 @@ impl<'a> Parser<'a> {
         Some(())
     }
 
-    fn prefix_parse_fn(&self, tok_type: &TType) -> Option<Box<Expression>> {
+    fn prefix_parse_fn(&self, tok_type: &TType) -> Option<Expression> {
         match tok_type {
-            TType::IDENT => self.parse_identifier(),
+            TType::IDENT => self.parse_identifier().ok(),
+            TType::INT => self.parse_integer_literal().ok(),
             _ => None,
         }
     }
 
-    fn parse_expression(&self, precedence: Precedent) -> Option<Box<Expression>> {
+    fn parse_expression(&self, precedence: Precedent) -> Option<Expression> {
         let prefix = self.prefix_parse_fn(&self.cur_token.tok_type);
 
         if let Some(result) = prefix {
@@ -136,11 +165,20 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_identifier(&self) -> Option<Box<Expression>> {
+    fn parse_identifier(&self) -> Result<Expression, ParseError> {
         let value = self.cur_token.tok_literal.clone();
         let idt_token = self.cur_token.clone();
         let ident_exp = ast::Identifier { idt_token, value };
-        Some(Box::new(Expression::Identifier(ident_exp)))
+        Ok(Expression::Identifier(ident_exp))
+    }
+
+    fn parse_integer_literal(&self) -> Result<Expression, ParseError> {
+        let int_token = self.cur_token.clone();
+        let value: u64 = int_token
+            .tok_literal
+            .parse()
+            .map_err(|_| ParseError::IntLitParseError(int_token.tok_literal.clone()))?;
+        Ok(Expression::IntLit(ast::IntegerLiteral { int_token, value }))
     }
 }
 

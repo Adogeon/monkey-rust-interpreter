@@ -100,22 +100,31 @@ fn test_interget_literal_expression() -> Result<(), String> {
         Ok(p) => p,
     };
 
-    assert_eq!(1, program.statements.len(), "program has not enough statements.got={}", program.statements.len());
-    for st in program.statements{
+    assert_eq!(
+        1,
+        program.statements.len(),
+        "program has not enough statements.got={}",
+        program.statements.len()
+    );
+    for st in program.statements {
         let ex_stmt = if let Statement::ExpStmt(es) = st {
             es
         } else {
             panic!("st is not a ExpressionStatement");
         };
 
-       let literal = if let Expression::IntLit(il) = ex_stmt.expression {
-            assert!(5, il.value,"literal.value not {}, got {}", 5, il.value);
-            let tok_lit = il.token_literal.unwrap_or_blank();
-            assert!("5", tok_lit, "literal.TokenLiteral not {}, got {}", "5", tok_lit);
+        if let Expression::IntLit(il) = ex_stmt.expression {
+            assert_eq!(5, il.value, "literal.value not {}, got {}", 5, il.value);
+            let tok_lit = il.token_literal().unwrap_or("blank");
+            assert_eq!(
+                "5", tok_lit,
+                "literal.TokenLiteral not {}, got {}",
+                "5", tok_lit
+            );
         } else {
-            panic!("st.Expression is not a IntergerLiteral"):
+            panic!("st.Expression is not a IntergerLiteral");
         }
     }
-    
+
     Ok(())
 }

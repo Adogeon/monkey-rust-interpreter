@@ -1,6 +1,5 @@
 use crate::token::Token;
-use std::boxed::Box;
-use std::fmt::{Display, Write};
+use std::fmt::Display;
 
 pub trait Node: Display {
     fn token_literal(&self) -> Option<&str>;
@@ -40,23 +39,6 @@ impl Display for Program {
             write!(f, "{}", s)?;
         }
         Ok(())
-    }
-}
-
-pub struct Identifier {
-    pub idt_token: Token,
-    pub value: String,
-}
-
-impl Node for Identifier {
-    fn token_literal(&self) -> Option<&str> {
-        Some(&self.idt_token.tok_literal)
-    }
-}
-
-impl Display for Identifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
     }
 }
 
@@ -146,14 +128,50 @@ impl Display for Statement {
     }
 }
 
+pub struct Identifier {
+    pub idt_token: Token,
+    pub value: String,
+}
+
+impl Node for Identifier {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.idt_token.tok_literal)
+    }
+}
+
+impl Display for Identifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
+pub struct IntegerLiteral {
+    pub int_token: Token,
+    pub value: u64,
+}
+
+impl Node for IntegerLiteral {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.int_token.tok_literal)
+    }
+}
+
+impl Display for IntegerLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.int_token.tok_literal)
+    }
+}
+
 pub enum Expression {
     Identifier(Identifier),
+    IntLit(IntegerLiteral),
 }
 
 impl Node for Expression {
     fn token_literal(&self) -> Option<&str> {
         match self {
             Self::Identifier(ident) => ident.token_literal(),
+            Self::IntLit(int_lit) => int_lit.token_literal(),
         }
     }
 }
@@ -161,19 +179,8 @@ impl Node for Expression {
 impl Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier(id) => write!(f, "{}", id),
-        }
-    }
-}
-
-pub enum ParseError {
-    UnexpectedToken,
-}
-
-impl Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnexpectedToken => write!(f, "Parser Error - UnexpectedToken"),
+            Self::Identifier(id) => write!(f, "{id}"),
+            Self::IntLit(int_lit) => write!(f, "{int_lit}"),
         }
     }
 }
