@@ -1,7 +1,6 @@
 use crate::ast::{self, Expression, Statement};
 use crate::lexer;
 use crate::token::{self, TType};
-use std::boxed::Box;
 use std::fmt::Display;
 
 enum Precedent {
@@ -153,6 +152,8 @@ impl<'a> Parser<'a> {
             _ => None,
         }
     }
+
+    fn infix_parse_fn(&self, tok_type: &TType) {}
 
     fn parse_expression(&self, precedence: Precedent) -> Option<Expression> {
         let prefix = self.prefix_parse_fn(&self.cur_token.tok_type);

@@ -1,5 +1,7 @@
+use std::iter::Product;
+
 use super::*;
-use crate::ast::{Node, Statement};
+use crate::ast::{Node, Program, Statement};
 use crate::lexer::Lexer;
 
 fn test_let_statement(stmt: &Statement, name: String) {
@@ -126,5 +128,66 @@ fn test_interget_literal_expression() -> Result<(), String> {
         }
     }
 
+    Ok(())
+}
+
+#[test]
+fn test_parsing_prefix_expression() -> Result<(), String> {
+    let prefix_tests = vec![("!5", "!", 5), ("-15", "-", 15)];
+
+    for tcase in prefix_tests {
+        let l = Lexer::new(tcase.0);
+        let mut p = Parser::new(l);
+        let program = p
+            .parse_program()
+            .map_err(|_| -> String { format!("parse error") })?;
+
+        assert_eq!(
+            1,
+            program.statements.len(),
+            "program.statements does not contain 1, got {}",
+            program.statements.len()
+        );
+
+        let exp_stmt = if let Statement::ExpStmt(ex) = &program.statements[0] {
+            ex
+        } else {
+            panic!("program.statements[0] is not an Expression Statement")
+        };
+
+        if let Expression::PreExp(pe) = exp_stmt.expression {
+            assert_eq!(
+                tcase.1, pe.operator,
+                "exp.Opartor is not {}, got={}",
+                tcase.1, pe.operator
+            );
+            assert!(test_integer_literal(pe.right, tcase.2).is_ok());
+        } else {
+            panic!("exp_stmt is not a PrefixExpression")
+        };
+    }
+    Ok(())
+}
+
+fn test_integer_literal(il: Expression, value: u64) -> Result<(), String> {
+    if let Expression::IntLit(literal) = il {
+        assert_eq!(
+            value, literal.value,
+            "literal.value not {}, got{}",
+            value, literal.value
+        );
+
+        let tok_lit = literal.token_literal().unwrap_or("blank");
+
+        assert_eq!(
+            value.to_string(),
+            tok_lit,
+            "literal.token_literal() not {}, got {}",
+            value.to_string(),
+            tok_lit
+        )
+    } else {
+        panic!("literal is not an Integer Literal")
+    }
     Ok(())
 }
