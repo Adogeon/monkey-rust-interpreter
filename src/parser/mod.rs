@@ -1,4 +1,4 @@
-use crate::ast::{self, StatementEnum};
+use crate::ast::{self, Expression, ParseError, Statement};
 use crate::lexer;
 use crate::token::{self, TType};
 use std::boxed::Box;
@@ -51,7 +51,7 @@ impl<'a> Parser<'a> {
         Ok(program)
     }
 
-    fn parse_statement(&mut self) -> Option<Box<StatementEnum>> {
+    fn parse_statement(&mut self) -> Option<Statement> {
         match self.cur_token.tok_type {
             TType::LET => self.parse_let_stmt(),
             TType::RETURN => self.parse_return_stmt(),
@@ -59,21 +59,17 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_let_stmt(&mut self) -> Option<Box<StatementEnum>> {
+    fn parse_let_stmt(&mut self) -> Option<Statement> {
         let stmt_token = self.cur_token.clone();
-        let mut stmt_value = None;
-        if !self.expect_peek(TType::IDENT) {
-            return None;
-        }
 
-        let stmt_name = Box::new(ast::Identifier {
+        self.expect_peek(TType::IDENT)?;
+
+        let stmt_name = ast::Identifier {
             idt_token: self.cur_token.clone(),
             value: self.cur_token.tok_literal.clone(),
-        });
+        };
 
-        if !self.expect_peek(TType::ASSIGN) {
-            return None;
-        }
+        self.expect_peek(TType::ASSIGN)?;
 
         while !self.cur_tok_is(TType::SEMICOLON) {
             self.next_tok();
@@ -82,13 +78,13 @@ impl<'a> Parser<'a> {
         let let_stmt = ast::LetStatement {
             stmt_token,
             name: stmt_name,
-            value: stmt_value,
+            value: None,
         };
 
-        Some(Box::new(StatementEnum::LetStmt(let_stmt)))
+        Some(Statement::LetStmt(let_stmt))
     }
 
-    fn parse_return_stmt(&mut self) -> Option<Box<StatementEnum>> {
+    fn parse_return_stmt(&mut self) -> Option<Statement> {
         let mut stmt_value = None;
         let ret_stmt = ast::ReturnStatement {
             stmt_token: self.cur_token.clone(),
@@ -101,34 +97,35 @@ impl<'a> Parser<'a> {
             self.next_tok();
         }
 
-        Some(Box::new(StatementEnum::RetStmt(ret_stmt)))
+        Some(Statement::RetStmt(ret_stmt))
     }
 
     fn cur_tok_is(&self, t: TType) -> bool {
         self.cur_token.tok_type == t
     }
 
-    fn peek_tok_is(&self, t: TType) -> bool {
-        self.peek_token.tok_type == t
-    }
-
-    fn expect_peek(&mut self, t: TType) -> bool {
-        if self.peek_tok_is(t) {
-            self.next_tok();
-            true
+    fn peek_tok_is(&self, t: TType) -> Option<()> {
+        if self.peek_token.tok_type == t {
+            Some(())
         } else {
-            false
+            None
         }
     }
 
-    fn prefix_parse_fn(&self, tok_type: &TType) -> Option<Box<dyn ast::Expression>> {
+    fn expect_peek(&mut self, t: TType) -> Option<()> {
+        self.peek_tok_is(t)?;
+        self.next_tok();
+        Some(())
+    }
+
+    fn prefix_parse_fn(&self, tok_type: &TType) -> Option<Box<Expression>> {
         match tok_type {
-            TType::IDENT => Some(self.parse_identifier()),
+            TType::IDENT => self.parse_identifier(),
             _ => None,
         }
     }
 
-    fn parse_expression(&self, precedence: Precedent) -> Option<Box<dyn ast::Expression>> {
+    fn parse_expression(&self, precedence: Precedent) -> Option<Box<Expression>> {
         let prefix = self.prefix_parse_fn(&self.cur_token.tok_type);
 
         if let Some(result) = prefix {
@@ -139,10 +136,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_identifier(&self) -> Option<Box<ast::Identifier>> {
+    fn parse_identifier(&self) -> Option<Box<Expression>> {
         let value = self.cur_token.tok_literal.clone();
         let idt_token = self.cur_token.clone();
-        Some(Box::new(ast::Identifier { idt_token, value }))
+        let ident_exp = ast::Identifier { idt_token, value };
+        Some(Box::new(Expression::Identifier(ident_exp)))
     }
 }
 

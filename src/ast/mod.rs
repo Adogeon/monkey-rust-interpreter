@@ -1,10 +1,9 @@
 use crate::token::Token;
 use std::boxed::Box;
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 
-pub trait Node {
+pub trait Node: Display {
     fn token_literal(&self) -> Option<&str>;
-    fn write_string(&self) -> String;
 }
 
 pub struct EmptyValue;
@@ -13,14 +12,16 @@ impl Node for EmptyValue {
     fn token_literal(&self) -> Option<&str> {
         Some("it's empty")
     }
+}
 
-    fn write_string(&self) -> String {
-        String::from("<blank>")
+impl Display for EmptyValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "It's blank")
     }
 }
 
 pub struct Program {
-    pub statements: Vec<Box<Statement>>,
+    pub statements: Vec<Statement>,
 }
 
 impl Node for Program {
@@ -31,13 +32,14 @@ impl Node for Program {
             None
         }
     }
+}
 
-    fn write_string(&self) -> String {
-        let mut buf = String::new();
+impl Display for Program {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for s in &self.statements {
-            write!(&mut buf, "{}", s.write_string()).unwrap();
+            write!(f, "{}", s)?;
         }
-        buf
+        Ok(())
     }
 }
 
@@ -50,70 +52,71 @@ impl Node for Identifier {
     fn token_literal(&self) -> Option<&str> {
         Some(&self.idt_token.tok_literal)
     }
+}
 
-    fn write_string(&self) -> String {
-        self.value.clone()
+impl Display for Identifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
     }
 }
 
 pub struct LetStatement {
     pub stmt_token: Token,
-    pub name: Box<Identifier>,
-    pub value: Option<Box<Expression>>,
+    pub name: Identifier,
+    pub value: Option<Expression>,
 }
 
 impl Node for LetStatement {
     fn token_literal(&self) -> Option<&str> {
         Some(&self.stmt_token.tok_literal)
     }
+}
 
-    fn write_string(&self) -> String {
-        let mut buf = String::new();
-
-        write!(&mut buf, "{} ", self.token_literal().unwrap());
-        write!(&mut buf, "{}", self.name.write_string());
-        write!(&mut buf, " = ");
-
+impl Display for LetStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} = ", self.token_literal().unwrap(), self.name)?;
         if let Some(stmt_value) = &self.value {
-            write!(&mut buf, "{}", stmt_value.write_string());
+            write!(f, "{stmt_value}")?;
         }
-        write!(&mut buf, ";");
-        buf
+        write!(f, ";")
     }
 }
 
 pub struct ReturnStatement {
     pub stmt_token: Token,
-    pub return_value: Option<Box<Expression>>,
+    pub return_value: Option<Expression>,
 }
 
 impl Node for ReturnStatement {
     fn token_literal(&self) -> Option<&str> {
         Some(&self.stmt_token.tok_literal)
     }
+}
 
-    fn write_string(&self) -> String {
-        let mut buf = String::new();
-        write!(&mut buf, "{} ", self.token_literal().unwrap());
+impl Display for ReturnStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ", self.token_literal().unwrap())?;
         if let Some(stmt_value) = &self.return_value {
-            write!(&mut buf, "{}", stmt_value.write_string());
+            write!(f, "{stmt_value}")?;
         }
-        write!(&mut buf, ";");
-        buf
+        write!(f, ";")
     }
 }
 
 pub struct ExpressionStatement {
     pub stmt_token: Token,
-    pub expression: Box<Expression>,
+    pub expression: Expression,
 }
 
 impl Node for ExpressionStatement {
     fn token_literal(&self) -> Option<&str> {
         Some(&self.stmt_token.tok_literal)
     }
-    fn write_string(&self) -> String {
-        String::from("ExpressionStatement still cooking")
+}
+
+impl Display for ExpressionStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ExpressionStatement still cooking")
     }
 }
 
@@ -131,12 +134,14 @@ impl Node for Statement {
             Self::ExpStmt(est) => est.token_literal(),
         }
     }
+}
 
-    fn write_string(&self) -> String {
+impl Display for Statement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::LetStmt(lst) => lst.write_string(),
-            Self::RetStmt(rst) => rst.write_string(),
-            Self::ExpStmt(est) => est.write_string(),
+            Self::LetStmt(lst) => write!(f, "{}", lst),
+            Self::RetStmt(rst) => write!(f, "{}", rst),
+            Self::ExpStmt(est) => write!(f, "{}", est),
         }
     }
 }
@@ -151,16 +156,26 @@ impl Node for Expression {
             Self::Identifier(ident) => ident.token_literal(),
         }
     }
+}
 
-    fn write_string(&self) -> String {
+impl Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier(ident) => ident.write_string(),
+            Self::Identifier(id) => write!(f, "{}", id),
         }
     }
 }
 
 pub enum ParseError {
     UnexpectedToken,
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnexpectedToken => write!(f, "Parser Error - UnexpectedToken"),
+        }
+    }
 }
 
 #[cfg(test)]

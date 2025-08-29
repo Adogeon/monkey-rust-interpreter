@@ -1,8 +1,8 @@
 use super::*;
-use crate::ast::{Node, StatementEnum};
+use crate::ast::{Node, Statement};
 use crate::lexer::Lexer;
 
-fn test_let_statement(stmt: &Box<StatementEnum>, name: String) {
+fn test_let_statement(stmt: &Statement, name: String) {
     let stmt_literal = stmt.token_literal().unwrap_or("blank");
     assert_eq!(
         "let", stmt_literal,
@@ -10,7 +10,7 @@ fn test_let_statement(stmt: &Box<StatementEnum>, name: String) {
         stmt_literal
     );
 
-    if let StatementEnum::LetStmt(ref let_st) = **stmt {
+    if let Statement::LetStmt(ref let_st) = *stmt {
         assert_eq!(
             name, let_st.name.value,
             "stmt.name.value not {}.got={}",
@@ -74,7 +74,7 @@ fn test_return_statements() -> Result<(), String> {
     );
 
     for stmt in program.statements {
-        if let StatementEnum::RetStmt(return_stmt) = *stmt {
+        if let Statement::RetStmt(return_stmt) = stmt {
             let stmt_literal = return_stmt.token_literal().unwrap_or("blank");
             assert_eq!(
                 "return", stmt_literal,
@@ -86,5 +86,36 @@ fn test_return_statements() -> Result<(), String> {
         }
     }
 
+    Ok(())
+}
+
+#[test]
+fn test_interget_literal_expression() -> Result<(), String> {
+    let input = "5;";
+
+    let l = Lexer::new(&input);
+    let mut p = Parser::new(l);
+    let program = match p.parse_program() {
+        Err(_e) => return Err(String::from("ParseProgram() error")),
+        Ok(p) => p,
+    };
+
+    assert_eq!(1, program.statements.len(), "program has not enough statements.got={}", program.statements.len());
+    for st in program.statements{
+        let ex_stmt = if let Statement::ExpStmt(es) = st {
+            es
+        } else {
+            panic!("st is not a ExpressionStatement");
+        };
+
+       let literal = if let Expression::IntLit(il) = ex_stmt.expression {
+            assert!(5, il.value,"literal.value not {}, got {}", 5, il.value);
+            let tok_lit = il.token_literal.unwrap_or_blank();
+            assert!("5", tok_lit, "literal.TokenLiteral not {}, got {}", "5", tok_lit);
+        } else {
+            panic!("st.Expression is not a IntergerLiteral"):
+        }
+    }
+    
     Ok(())
 }
