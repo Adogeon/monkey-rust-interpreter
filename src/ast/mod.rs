@@ -129,13 +129,13 @@ impl Display for Statement {
 }
 
 pub struct Identifier {
-    pub idt_token: Token,
+    pub token: Token,
     pub value: String,
 }
 
 impl Node for Identifier {
     fn token_literal(&self) -> Option<&str> {
-        Some(&self.idt_token.tok_literal)
+        Some(&self.token.tok_literal)
     }
 }
 
@@ -146,25 +146,44 @@ impl Display for Identifier {
 }
 
 pub struct IntegerLiteral {
-    pub int_token: Token,
+    pub token: Token,
     pub value: u64,
 }
 
 impl Node for IntegerLiteral {
     fn token_literal(&self) -> Option<&str> {
-        Some(&self.int_token.tok_literal)
+        Some(&self.token.tok_literal)
     }
 }
 
 impl Display for IntegerLiteral {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.int_token.tok_literal)
+        write!(f, "{}", self.token.tok_literal)
+    }
+}
+
+pub struct PrefixExpression {
+    pub token: Token,
+    pub operator: String,
+    pub right: Box<Expression>,
+}
+
+impl Node for PrefixExpression {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for PrefixExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}{})", self.operator, self.right)
     }
 }
 
 pub enum Expression {
     Identifier(Identifier),
     IntLit(IntegerLiteral),
+    PreExp(PrefixExpression),
 }
 
 impl Node for Expression {
@@ -172,6 +191,7 @@ impl Node for Expression {
         match self {
             Self::Identifier(ident) => ident.token_literal(),
             Self::IntLit(int_lit) => int_lit.token_literal(),
+            Self::PreExp(pe) => pe.token_literal(),
         }
     }
 }
@@ -181,6 +201,7 @@ impl Display for Expression {
         match self {
             Self::Identifier(id) => write!(f, "{id}"),
             Self::IntLit(int_lit) => write!(f, "{int_lit}"),
+            Self::PreExp(pe) => write!(f, "{pe}"),
         }
     }
 }

@@ -11,14 +11,14 @@ fn test_write_string() {
                     tok_literal: String::from("let"),
                 },
                 name: Identifier {
-                    idt_token: Token {
+                    token: Token {
                         tok_type: TType::IDENT,
                         tok_literal: String::from("myVar"),
                     },
                     value: String::from("myVar"),
                 },
                 value: Some(Expression::Identifier(Identifier {
-                    idt_token: Token {
+                    token: Token {
                         tok_type: TType::IDENT,
                         tok_literal: String::from("anotherVar"),
                     },

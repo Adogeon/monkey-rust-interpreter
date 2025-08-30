@@ -15,14 +15,22 @@ enum Precedent {
 
 pub enum ParseError {
     UnexpectedToken,
+    ParsingError,
     IntLitParseError(String),
+    NoPrefixParseFnError(TType),
 }
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnexpectedToken => write!(f, "Parser Error - UnexpectedToken"),
+            Self::UnexpectedToken => write!(f, "Parse Error - UnexpectedToken"),
             Self::IntLitParseError(tok_lit) => write!(f, "can't parse {tok_lit} to int"),
+            Self::NoPrefixParseFnError(tok_type) => write!(
+                f,
+                "Parse Error - No prefix parse function for {:?} found",
+                tok_type
+            ),
+            Self::ParsingError => write!(f, "Program has parsing Error"),
         }
     }
 }
@@ -31,6 +39,7 @@ pub struct Parser<'a> {
     l: lexer::Lexer<'a>,
     cur_token: token::Token,
     peek_token: token::Token,
+    errors: Vec<ParseError>,
 }
 
 impl<'a> Parser<'a> {
@@ -44,6 +53,7 @@ impl<'a> Parser<'a> {
             l: l,
             cur_token: token::Token::new(TType::EOF, ""),
             peek_token: token::Token::new(TType::EOF, ""),
+            errors: Vec::new(),
         };
         p.next_tok();
         p.next_tok();
@@ -57,11 +67,18 @@ impl<'a> Parser<'a> {
             if let Some(stmt) = self.parse_statement() {
                 program.statements.push(stmt);
             } else {
-                return Err(ParseError::UnexpectedToken);
+                self.append_errors(ParseError::UnexpectedToken);
             }
             self.next_tok()
         }
 
+        if self.errors.len() > 0 {
+            println!("parser has {} errors", self.errors.len());
+            for err in &self.errors {
+                println!("{err}");
+            }
+            return Err(ParseError::ParsingError);
+        }
         Ok(program)
     }
 
@@ -79,7 +96,7 @@ impl<'a> Parser<'a> {
         self.expect_peek(TType::IDENT)?;
 
         let stmt_name = ast::Identifier {
-            idt_token: self.cur_token.clone(),
+            token: self.cur_token.clone(),
             value: self.cur_token.tok_literal.clone(),
         };
 
@@ -127,6 +144,10 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    fn append_errors(&mut self, error: ParseError) {
+        self.errors.push(error);
+    }
+
     fn cur_tok_is(&self, t: TType) -> bool {
         self.cur_token.tok_type == t
     }
@@ -155,21 +176,24 @@ impl<'a> Parser<'a> {
 
     fn infix_parse_fn(&self, tok_type: &TType) {}
 
-    fn parse_expression(&self, precedence: Precedent) -> Option<Expression> {
+    fn parse_expression(&mut self, precedence: Precedent) -> Option<Expression> {
         let prefix = self.prefix_parse_fn(&self.cur_token.tok_type);
 
         if let Some(result) = prefix {
             let left_exp = result;
             Some(left_exp)
         } else {
+            self.append_errors(ParseError::NoPrefixParseFnError(
+                self.cur_token.tok_type.clone(),
+            ));
             None
         }
     }
 
     fn parse_identifier(&self) -> Result<Expression, ParseError> {
         let value = self.cur_token.tok_literal.clone();
-        let idt_token = self.cur_token.clone();
-        let ident_exp = ast::Identifier { idt_token, value };
+        let token = self.cur_token.clone();
+        let ident_exp = ast::Identifier { token, value };
         Ok(Expression::Identifier(ident_exp))
     }
 
@@ -179,7 +203,10 @@ impl<'a> Parser<'a> {
             .tok_literal
             .parse()
             .map_err(|_| ParseError::IntLitParseError(int_token.tok_literal.clone()))?;
-        Ok(Expression::IntLit(ast::IntegerLiteral { int_token, value }))
+        Ok(Expression::IntLit(ast::IntegerLiteral {
+            token: int_token,
+            value,
+        }))
     }
 }
 

@@ -1,7 +1,5 @@
-use std::iter::Product;
-
 use super::*;
-use crate::ast::{Node, Program, Statement};
+use crate::ast::{Node, Statement};
 use crate::lexer::Lexer;
 
 fn test_let_statement(stmt: &Statement, name: String) {
@@ -140,7 +138,7 @@ fn test_parsing_prefix_expression() -> Result<(), String> {
         let mut p = Parser::new(l);
         let program = p
             .parse_program()
-            .map_err(|_| -> String { format!("parse error") })?;
+            .map_err(|e| -> String { format!("parse error:{e}") })?;
 
         assert_eq!(
             1,
@@ -155,13 +153,13 @@ fn test_parsing_prefix_expression() -> Result<(), String> {
             panic!("program.statements[0] is not an Expression Statement")
         };
 
-        if let Expression::PreExp(pe) = exp_stmt.expression {
+        if let Expression::PreExp(pe) = &exp_stmt.expression {
             assert_eq!(
                 tcase.1, pe.operator,
                 "exp.Opartor is not {}, got={}",
                 tcase.1, pe.operator
             );
-            assert!(test_integer_literal(pe.right, tcase.2).is_ok());
+            assert!(test_integer_literal(&*pe.right, tcase.2).is_ok());
         } else {
             panic!("exp_stmt is not a PrefixExpression")
         };
@@ -169,7 +167,7 @@ fn test_parsing_prefix_expression() -> Result<(), String> {
     Ok(())
 }
 
-fn test_integer_literal(il: Expression, value: u64) -> Result<(), String> {
+fn test_integer_literal(il: &Expression, value: u64) -> Result<(), String> {
     if let Expression::IntLit(literal) = il {
         assert_eq!(
             value, literal.value,
