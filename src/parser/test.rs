@@ -189,3 +189,99 @@ fn test_integer_literal(il: &Expression, value: u64) -> Result<(), String> {
     }
     Ok(())
 }
+
+#[test]
+fn test_parsing_infix_expression() -> Result<(), String> {
+    struct Case {
+        input: &str,
+        left_val: u64,
+        operator: &str,
+        right_val: u64,
+    }
+
+    let test_cases: Vec<Case> = vec![
+        Case {
+            input: "5+5;",
+            left_val: 5,
+            operator: "+",
+            right_val: 5,
+        },
+        Case {
+            input: "5-5;",
+            left_val: 5,
+            operator: "-",
+            right_val: 5,
+        },
+        Case {
+            input: "5*5;",
+            left_val: 5,
+            operator: "*",
+            right_val: 5,
+        },
+        Case {
+            input: "5/5;",
+            left_val: 5,
+            operator: "/",
+            right_val: 5,
+        },
+        Case {
+            input: "5>5;",
+            left_val: 5,
+            operator: ">",
+            right_val: 5,
+        },
+        Case {
+            input: "5<5;",
+            left_val: 5,
+            operator: "<",
+            right_val: 5,
+        },
+        Case {
+            input: "5==5;",
+            left_val: 5,
+            operator: "==",
+            right_val: 5,
+        },
+        Case {
+            input: "5!=5;",
+            left_val: 5,
+            operator: "!=",
+            right_val: 5,
+        },
+    ];
+
+    for tcase in test_cases {
+        let l = Lexer::new(tcase.input);
+        let p = Parser::new(l);
+        let program = p
+            .parse_program()
+            .map_err(|err| -> String { format!("parse error{err}") })?;
+
+        assert_eq!(
+            1,
+            program.statements.len(),
+            "program statement does not contain 1 statement. got {}",
+            program.statements.len()
+        );
+
+        let inf_stmt = if let Statement::ExpStmt(ex) = &program.statements[0] {
+            ex
+        } else {
+            panic!("program.statements[0] is not an Expression Statement")
+        };
+
+        if let Expression::InExp(ie) = &inf_stmt.expression {
+            assert!(test_integer_literal(&*ie.left, tcase.left_val).is_ok());
+            assert_eq!(
+                tcase.operator, ie.operator,
+                "exp.Opartor is not {}, got={}",
+                tcase.operator, ie.operator
+            );
+            assert!(test_integer_literal(&*ie.right, tcase.right_val).is_ok());
+        } else {
+            panic!("exp_stmt is not a PrefixExpression")
+        };
+    }
+
+    Ok(())
+}
