@@ -166,10 +166,11 @@ impl<'a> Parser<'a> {
         Some(())
     }
 
-    fn prefix_parse_fn(&self, tok_type: &TType) -> Option<Expression> {
+    fn prefix_parse_fn(&mut self, tok_type: TType) -> Option<Expression> {
         match tok_type {
             TType::IDENT => self.parse_identifier().ok(),
             TType::INT => self.parse_integer_literal().ok(),
+            TType::BANG | TType::MINUS => self.parse_prefix_expression().ok(),
             _ => None,
         }
     }
@@ -177,7 +178,7 @@ impl<'a> Parser<'a> {
     fn infix_parse_fn(&self, tok_type: &TType) {}
 
     fn parse_expression(&mut self, precedence: Precedent) -> Option<Expression> {
-        let prefix = self.prefix_parse_fn(&self.cur_token.tok_type);
+        let prefix = self.prefix_parse_fn(self.cur_token.tok_type.clone());
 
         if let Some(result) = prefix {
             let left_exp = result;
@@ -206,6 +207,22 @@ impl<'a> Parser<'a> {
         Ok(Expression::IntLit(ast::IntegerLiteral {
             token: int_token,
             value,
+        }))
+    }
+
+    fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        let literal = self.cur_token.tok_literal.clone();
+        self.next_tok();
+        let right = if let Some(exp) = self.parse_expression(Precedent::PREFIX) {
+            exp
+        } else {
+            return Err(ParseError::ParsingError);
+        };
+        Ok(Expression::PreExp(ast::PrefixExpression {
+            token,
+            operator: literal,
+            right: Box::new(right),
         }))
     }
 }
