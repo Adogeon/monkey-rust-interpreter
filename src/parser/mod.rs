@@ -3,6 +3,9 @@ use crate::lexer;
 use crate::token::{self, TType};
 use std::fmt::Display;
 
+type InfixFn<'a> = Box<dyn FnOnce(Box<Expression>) -> Option<Expression> + 'a>;
+
+#[derive(PartialOrd, PartialEq)]
 enum Precedent {
     LOWEST = 0,
     EQUALS = 1,
@@ -13,21 +16,43 @@ enum Precedent {
     CALL = 6,
 }
 
+fn tok_preceden_look_up(tok_type: TType) -> Precedent {
+    match tok_type {
+        TType::EQ => Precedent::EQUALS,
+        TType::NOTEQ => Precedent::EQUALS,
+        TType::LT => Precedent::LESSGREATER,
+        TType::GT => Precedent::LESSGREATER,
+        TType::PLUS => Precedent::SUM,
+        TType::MINUS => Precedent::SUM,
+        TType::SLASH => Precedent::PRODUCT,
+        TType::ASSIGN => Precedent::PRODUCT,
+        _ => Precedent::LOWEST,
+    }
+}
+
 pub enum ParseError {
-    UnexpectedToken,
+    UnexpectedToken(String),
     ParsingError,
     IntLitParseError(String),
     NoPrefixParseFnError(TType),
+    NoInfixParseFnError(TType),
 }
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnexpectedToken => write!(f, "Parse Error - UnexpectedToken"),
+            Self::UnexpectedToken(tok_lit) => {
+                write!(f, "Parse Error - UnexpectedToken : {tok_lit}",)
+            }
             Self::IntLitParseError(tok_lit) => write!(f, "can't parse {tok_lit} to int"),
             Self::NoPrefixParseFnError(tok_type) => write!(
                 f,
                 "Parse Error - No prefix parse function for {:?} found",
+                tok_type
+            ),
+            Self::NoInfixParseFnError(tok_type) => write!(
+                f,
+                "Parse Error - No infix parse function for {:?} found",
                 tok_type
             ),
             Self::ParsingError => write!(f, "Program has parsing Error"),
@@ -67,7 +92,9 @@ impl<'a> Parser<'a> {
             if let Some(stmt) = self.parse_statement() {
                 program.statements.push(stmt);
             } else {
-                self.append_errors(ParseError::UnexpectedToken);
+                self.append_errors(ParseError::UnexpectedToken(
+                    self.cur_token.tok_literal.clone(),
+                ));
             }
             self.next_tok()
         }
@@ -166,6 +193,14 @@ impl<'a> Parser<'a> {
         Some(())
     }
 
+    fn cur_precedence(&self) -> Precedent {
+        tok_preceden_look_up(self.cur_token.tok_type.clone())
+    }
+
+    fn peek_precedence(&self) -> Precedent {
+        tok_preceden_look_up(self.peek_token.tok_type.clone())
+    }
+
     fn prefix_parse_fn(&mut self, tok_type: TType) -> Option<Expression> {
         match tok_type {
             TType::IDENT => self.parse_identifier().ok(),
@@ -175,18 +210,57 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn infix_parse_fn(&self, tok_type: &TType) {}
+    fn check_infix_tok(&self, tok_type: TType) -> bool {
+        matches!(
+            tok_type,
+            TType::PLUS
+                | TType::MINUS
+                | TType::SLASH
+                | TType::ASTERISK
+                | TType::EQ
+                | TType::NOTEQ
+                | TType::LT
+                | TType::GT
+        )
+    }
+
+    fn infix_parse_fn<'b>(&'b mut self, tok_type: TType) -> Option<InfixFn<'b>> {
+        match tok_type {
+            TType::PLUS
+            | TType::MINUS
+            | TType::SLASH
+            | TType::ASTERISK
+            | TType::EQ
+            | TType::NOTEQ
+            | TType::LT
+            | TType::GT => Some(Box::new(|left: Box<Expression>| {
+                self.parse_infix_expression(left).ok()
+            })),
+            _ => None,
+        }
+    }
 
     fn parse_expression(&mut self, precedence: Precedent) -> Option<Expression> {
         let prefix = self.prefix_parse_fn(self.cur_token.tok_type.clone());
 
         if let Some(result) = prefix {
-            let left_exp = result;
-            Some(left_exp)
+            let mut left_exp: Option<Box<Expression>> = Some(Box::new(result));
+            while !self.peek_tok_is(TType::SEMICOLON).is_some()
+                && precedence < self.peek_precedence()
+            {
+                if self.check_infix_tok(self.peek_token.tok_type.clone()) {
+                    self.next_tok();
+                    if let Some(exp) = self.parse_infix_expression(left_exp.take().unwrap()).ok() {
+                        left_exp = Some(Box::new(exp));
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            left_exp.map(|exp| *exp)
         } else {
-            self.append_errors(ParseError::NoPrefixParseFnError(
-                self.cur_token.tok_type.clone(),
-            ));
             None
         }
     }
@@ -222,6 +296,24 @@ impl<'a> Parser<'a> {
         Ok(Expression::PreExp(ast::PrefixExpression {
             token,
             operator: literal,
+            right: Box::new(right),
+        }))
+    }
+
+    fn parse_infix_expression(&mut self, left: Box<Expression>) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        let literal = self.cur_token.tok_literal.clone();
+        let precedence = self.cur_precedence();
+        self.next_tok();
+        let right = if let Some(exp) = self.parse_expression(precedence) {
+            exp
+        } else {
+            return Err(ParseError::ParsingError);
+        };
+        Ok(Expression::InExp(ast::InfixExpression {
+            token,
+            operator: literal,
+            left: left,
             right: Box::new(right),
         }))
     }

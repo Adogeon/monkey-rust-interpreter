@@ -180,10 +180,30 @@ impl Display for PrefixExpression {
     }
 }
 
+pub struct InfixExpression {
+    pub token: Token,
+    pub left: Box<Expression>,
+    pub operator: String,
+    pub right: Box<Expression>,
+}
+
+impl Node for InfixExpression {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for InfixExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({} {} {})", self.left, self.operator, self.right)
+    }
+}
+
 pub enum Expression {
     Identifier(Identifier),
     IntLit(IntegerLiteral),
     PreExp(PrefixExpression),
+    InExp(InfixExpression),
 }
 
 impl Node for Expression {
@@ -192,6 +212,7 @@ impl Node for Expression {
             Self::Identifier(ident) => ident.token_literal(),
             Self::IntLit(int_lit) => int_lit.token_literal(),
             Self::PreExp(pe) => pe.token_literal(),
+            Self::InExp(ie) => ie.token_literal(),
         }
     }
 }
@@ -202,6 +223,7 @@ impl Display for Expression {
             Self::Identifier(id) => write!(f, "{id}"),
             Self::IntLit(int_lit) => write!(f, "{int_lit}"),
             Self::PreExp(pe) => write!(f, "{pe}"),
+            Self::InExp(ie) => write!(f, "{ie}"),
         }
     }
 }
