@@ -205,6 +205,7 @@ impl<'a> Parser<'a> {
             TType::IDENT => self.parse_identifier().ok(),
             TType::INT => self.parse_integer_literal().ok(),
             TType::BANG | TType::MINUS => self.parse_prefix_expression().ok(),
+            TType::TRUE | TType::FALSE => self.parse_boolean().ok(),
             _ => None,
         }
     }
@@ -253,6 +254,14 @@ impl<'a> Parser<'a> {
         let token = self.cur_token.clone();
         let ident_exp = ast::Identifier { token, value };
         Ok(Expression::Identifier(ident_exp))
+    }
+
+    fn parse_boolean(&self) -> Result<Expression, ParseError> {
+        let bool_lit = ast::Boolean {
+            token: self.cur_token.clone(),
+            value: self.cur_tok_is(TType::TRUE),
+        };
+        Ok(Expression::BoolLit(bool_lit))
     }
 
     fn parse_integer_literal(&self) -> Result<Expression, ParseError> {

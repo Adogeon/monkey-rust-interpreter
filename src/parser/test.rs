@@ -130,6 +130,50 @@ fn test_interget_literal_expression() -> Result<(), String> {
 }
 
 #[test]
+fn test_boolean_literal_expression() -> Result<(), String> {
+    let input = "true;";
+
+    let l = Lexer::new(&input);
+    let mut p = Parser::new(l);
+    let program = match p.parse_program() {
+        Err(_e) => return Err(String::from("ParseProgram() error")),
+        Ok(p) => p,
+    };
+
+    assert_eq!(
+        1,
+        program.statements.len(),
+        "program has not enough statements.got={}",
+        program.statements.len()
+    );
+    for st in program.statements {
+        let ex_stmt = if let Statement::ExpStmt(es) = st {
+            es
+        } else {
+            panic!("st is not a ExpressionStatement");
+        };
+
+        if let Expression::BoolLit(bl) = ex_stmt.expression {
+            assert_eq!(
+                true, bl.value,
+                "literal.value not {}, got {}",
+                true, bl.value
+            );
+            let tok_lit = bl.token_literal().unwrap_or("blank");
+            assert_eq!(
+                "true", tok_lit,
+                "literal.TokenLiteral not {}, got {}",
+                "true", tok_lit
+            );
+        } else {
+            panic!("st.Expression is not a BooleanLiteral");
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
 fn test_parsing_prefix_expression() -> Result<(), String> {
     let prefix_tests = vec![("!5", "!", 5), ("-15", "-", 15)];
 

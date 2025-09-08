@@ -199,11 +199,29 @@ impl Display for InfixExpression {
     }
 }
 
+pub struct Boolean {
+    pub token: Token,
+    pub value: bool,
+}
+
+impl Node for Boolean {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for Boolean {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.token.tok_literal)
+    }
+}
+
 pub enum Expression {
     Identifier(Identifier),
     IntLit(IntegerLiteral),
     PreExp(PrefixExpression),
     InExp(InfixExpression),
+    BoolLit(Boolean),
 }
 
 impl Node for Expression {
@@ -213,6 +231,7 @@ impl Node for Expression {
             Self::IntLit(int_lit) => int_lit.token_literal(),
             Self::PreExp(pe) => pe.token_literal(),
             Self::InExp(ie) => ie.token_literal(),
+            Self::BoolLit(bl) => bl.token_literal(),
         }
     }
 }
@@ -224,6 +243,7 @@ impl Display for Expression {
             Self::IntLit(int_lit) => write!(f, "{int_lit}"),
             Self::PreExp(pe) => write!(f, "{pe}"),
             Self::InExp(ie) => write!(f, "{ie}"),
+            Self::BoolLit(bl) => write!(f, "{bl}"),
         }
     }
 }
