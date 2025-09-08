@@ -190,6 +190,65 @@ fn test_integer_literal(il: &Expression, value: u64) -> Result<(), String> {
     Ok(())
 }
 
+fn test_identifier(ie: &Expression, value: String) -> Result<(), String> {
+    if let Expression::Identifier(ident) = ie {
+        assert_eq!(
+            value, ident.value,
+            "ident.value not {value}. got={}",
+            ident.value
+        );
+        let tok_lit = ident.token_literal().unwrap_or("blank");
+        assert_eq!(
+            value, tok_lit,
+            "ident.TokenLiteral not {value}, got {tok_lit}"
+        );
+    } else {
+        panic!("ie is not Indentifier Expression")
+    }
+    Ok(())
+}
+
+#[derive(PartialEq, Debug)]
+enum LiteralVal {
+    Int(u64),
+    Ident(String),
+}
+
+impl From<u64> for LiteralVal {
+    fn from(value: u64) -> Self {
+        LiteralVal::Int(value)
+    }
+}
+
+impl From<&str> for LiteralVal {
+    fn from(value: &str) -> Self {
+        LiteralVal::Ident(value.to_string())
+    }
+}
+
+fn test_literal_expression(exp: &Expression, value: LiteralVal) -> Result<(), String> {
+    match value {
+        LiteralVal::Int(val) => test_integer_literal(exp, val),
+        LiteralVal::Ident(id) => test_identifier(exp, id),
+        _ => panic!("Mismatch literal type"),
+    }
+}
+
+fn test_infix_expression(
+    exp: &Expression,
+    left: LiteralVal,
+    operator: String,
+    right: LiteralVal,
+) -> Result<(), String> {
+    if let Expression::InExp(infix_exp) = exp {
+        assert!(test_literal_expression(infix_exp.left.as_ref(), left).is_ok());
+        assert_eq!(operator, infix_exp.operator);
+        assert!(test_literal_expression(infix_exp.right.as_ref(), right).is_ok());
+        Ok(())
+    } else {
+        panic!("exp is not Infix Expression")
+    }
+}
 #[test]
 fn test_parsing_infix_expression() -> Result<(), String> {
     struct Case<'a> {
@@ -206,7 +265,7 @@ fn test_parsing_infix_expression() -> Result<(), String> {
             operator: "+",
             right_val: 5,
         },
-        /*Case {
+        Case {
             input: "5-5;",
             left_val: 5,
             operator: "-",
@@ -247,7 +306,7 @@ fn test_parsing_infix_expression() -> Result<(), String> {
             left_val: 5,
             operator: "!=",
             right_val: 5,
-        },*/
+        },
     ];
 
     for tcase in test_cases {
@@ -270,17 +329,13 @@ fn test_parsing_infix_expression() -> Result<(), String> {
             panic!("program.statements[0] is not an Expression Statement")
         };
 
-        if let Expression::InExp(ie) = &inf_stmt.expression {
-            assert!(test_integer_literal(&*ie.left, tcase.left_val).is_ok());
-            assert_eq!(
-                tcase.operator, ie.operator,
-                "exp.Opartor is not {}, got={}",
-                tcase.operator, ie.operator
-            );
-            assert!(test_integer_literal(&*ie.right, tcase.right_val).is_ok());
-        } else {
-            panic!("exp_stmt is not a PrefixExpression")
-        };
+        assert!(test_infix_expression(
+            &inf_stmt.expression,
+            tcase.left_val.into(),
+            tcase.operator.to_string(),
+            tcase.right_val.into()
+        )
+        .is_ok())
     }
 
     Ok(())

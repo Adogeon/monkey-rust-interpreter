@@ -3,8 +3,6 @@ use crate::lexer;
 use crate::token::{self, TType};
 use std::fmt::Display;
 
-type InfixFn<'a> = Box<dyn FnOnce(Box<Expression>) -> Option<Expression> + 'a>;
-
 #[derive(PartialOrd, PartialEq)]
 enum Precedent {
     LOWEST = 0,
@@ -25,6 +23,7 @@ fn tok_preceden_look_up(tok_type: TType) -> Precedent {
         TType::PLUS => Precedent::SUM,
         TType::MINUS => Precedent::SUM,
         TType::SLASH => Precedent::PRODUCT,
+        TType::ASTERISK => Precedent::PRODUCT,
         TType::ASSIGN => Precedent::PRODUCT,
         _ => Precedent::LOWEST,
     }
@@ -222,22 +221,6 @@ impl<'a> Parser<'a> {
                 | TType::LT
                 | TType::GT
         )
-    }
-
-    fn infix_parse_fn<'b>(&'b mut self, tok_type: TType) -> Option<InfixFn<'b>> {
-        match tok_type {
-            TType::PLUS
-            | TType::MINUS
-            | TType::SLASH
-            | TType::ASTERISK
-            | TType::EQ
-            | TType::NOTEQ
-            | TType::LT
-            | TType::GT => Some(Box::new(|left: Box<Expression>| {
-                self.parse_infix_expression(left).ok()
-            })),
-            _ => None,
-        }
     }
 
     fn parse_expression(&mut self, precedence: Precedent) -> Option<Expression> {
