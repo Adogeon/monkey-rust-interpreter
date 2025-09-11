@@ -356,11 +356,24 @@ impl<'a> Parser<'a> {
             .parse_block_statement()
             .map_err(|_err| ParseError::ParsingError)?;
 
+        let mut alternative = None;
+
+        if self.peek_tok_is(TType::ELSE).is_some() {
+            self.next_tok();
+            if self.expect_peek(TType::LBRACE).is_none() {
+                return Err(ParseError::MissingExpectedToken(TType::LBRACE));
+            }
+            alternative = Some(
+                self.parse_block_statement()
+                    .map_err(|_err| ParseError::ParsingError)?,
+            );
+        }
+
         Ok(Expression::IfExp(ast::IfExpression {
             token: tok,
             condition: Box::new(condition),
             consequence,
-            alternative: None,
+            alternative,
         }))
     }
 
