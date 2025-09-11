@@ -482,3 +482,121 @@ fn test_parsing_infix_expression() -> Result<(), String> {
 
     Ok(())
 }
+
+#[test]
+fn test_if_expression() -> Result<(), String> {
+    let input = "if (x < y) {x}";
+
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("parse error: {err}"))?;
+
+    assert_eq!(
+        1,
+        program.statements.len(),
+        "program.statements doesn't contain 1 statement. got={}",
+        program.statements.len()
+    );
+
+    let if_stmt = if let Statement::ExpStmt(exp_stmt) = &program.statements[0] {
+        exp_stmt
+    } else {
+        panic!("program.statement[0] is not an Expression Statement");
+    };
+
+    let if_exp = if let Expression::IfExp(exp) = &if_stmt.expression {
+        exp
+    } else {
+        panic!("if_stmt.expression is not an If Expression");
+    };
+
+    assert!(test_infix_expression(&if_exp.condition, "x".into(), "<".into(), "y".into()).is_ok());
+
+    assert_eq!(
+        1,
+        if_exp.consequence.statements.len(),
+        "consequences is not 1 statements. got={}",
+        if_exp.consequence.statements.len()
+    );
+
+    let consequences_stmt = if let Statement::ExpStmt(stmt) = &if_exp.consequence.statements[0] {
+        stmt
+    } else {
+        panic!("Consequence statements[0] is not an Expression Statement");
+    };
+    assert!(test_identifier(&consequences_stmt.expression, "x".into()).is_ok());
+
+    assert!(&if_exp.alternative.is_none());
+
+    Ok(())
+}
+
+#[test]
+fn test_if_else_expression() -> Result<(), String> {
+    let input = "if (x < y) {x} else {y}";
+
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("parse error: {err}"))?;
+
+    assert_eq!(
+        1,
+        program.statements.len(),
+        "program.statements doesn't contain 1 statement. got={}",
+        program.statements.len()
+    );
+
+    let if_stmt = if let Statement::ExpStmt(exp_stmt) = &program.statements[0] {
+        exp_stmt
+    } else {
+        panic!("program.statement[0] is not an Expression Statement");
+    };
+
+    let if_exp = if let Expression::IfExp(exp) = &if_stmt.expression {
+        exp
+    } else {
+        panic!("if_stmt.expression is not an If Expression");
+    };
+
+    assert!(test_infix_expression(&if_exp.condition, "x".into(), "<".into(), "y".into()).is_ok());
+
+    assert_eq!(
+        1,
+        if_exp.consequence.statements.len(),
+        "consequences is not 1 statements. got={}",
+        if_exp.consequence.statements.len()
+    );
+
+    let consequences_stmt = if let Statement::ExpStmt(stmt) = &if_exp.consequence.statements[0] {
+        stmt
+    } else {
+        panic!("Consequence statements[0] is not an Expression Statement");
+    };
+    assert!(test_identifier(&consequences_stmt.expression, "x".into()).is_ok());
+
+    let alternatives = if let Some(result) = &if_exp.alternative {
+        result
+    } else {
+        panic!("No alternative block in if else expression")
+    };
+
+    assert_eq!(
+        1,
+        alternatives.statements.len(),
+        "alternatives is not 1 statements. got={}",
+        alternatives.statements.len()
+    );
+
+    let alternative_stmt = if let Statement::ExpStmt(stmt) = &alternatives.statements[0] {
+        stmt
+    } else {
+        panic!("alternative statements[0] is not an Expression Statement");
+    };
+    assert!(test_identifier(&alternative_stmt.expression, "y".into()).is_ok());
+
+    Ok(())
+}
