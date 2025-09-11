@@ -102,10 +102,32 @@ impl Display for ExpressionStatement {
     }
 }
 
+pub struct BlockStatement {
+    pub token: Token,
+    pub statements: Vec<Statement>,
+}
+
+impl Node for BlockStatement {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for BlockStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for stmt in &self.statements {
+            write!(f, "{stmt}")?;
+        }
+
+        Ok(())
+    }
+}
+
 pub enum Statement {
     LetStmt(LetStatement),
     RetStmt(ReturnStatement),
     ExpStmt(ExpressionStatement),
+    BlcStmt(BlockStatement),
 }
 
 impl Node for Statement {
@@ -114,6 +136,7 @@ impl Node for Statement {
             Self::LetStmt(lst) => lst.token_literal(),
             Self::RetStmt(rst) => rst.token_literal(),
             Self::ExpStmt(est) => est.token_literal(),
+            Self::BlcStmt(bst) => bst.token_literal(),
         }
     }
 }
@@ -124,6 +147,7 @@ impl Display for Statement {
             Self::LetStmt(lst) => write!(f, "{}", lst),
             Self::RetStmt(rst) => write!(f, "{}", rst),
             Self::ExpStmt(est) => write!(f, "{}", est),
+            Self::BlcStmt(bst) => write!(f, "{}", bst),
         }
     }
 }
@@ -216,12 +240,37 @@ impl Display for Boolean {
     }
 }
 
+pub struct IfExpression {
+    pub token: Token,
+    pub condition: Box<Expression>,
+    pub consequence: BlockStatement,
+    pub alternative: Option<BlockStatement>,
+}
+
+impl Node for IfExpression {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for IfExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "if {} ", self.condition)?;
+        write!(f, "{}", self.consequence)?;
+        if let Some(alternative) = &self.alternative {
+            write!(f, "{}", alternative)?;
+        }
+        Ok(())
+    }
+}
+
 pub enum Expression {
     Identifier(Identifier),
     IntLit(IntegerLiteral),
     PreExp(PrefixExpression),
     InExp(InfixExpression),
     BoolLit(Boolean),
+    IfExp(IfExpression),
 }
 
 impl Node for Expression {
@@ -232,6 +281,7 @@ impl Node for Expression {
             Self::PreExp(pe) => pe.token_literal(),
             Self::InExp(ie) => ie.token_literal(),
             Self::BoolLit(bl) => bl.token_literal(),
+            Self::IfExp(ife) => ife.token_literal(),
         }
     }
 }
@@ -244,6 +294,7 @@ impl Display for Expression {
             Self::PreExp(pe) => write!(f, "{pe}"),
             Self::InExp(ie) => write!(f, "{ie}"),
             Self::BoolLit(bl) => write!(f, "{bl}"),
+            Self::IfExp(ife) => write!(f, "{ife}"),
         }
     }
 }
