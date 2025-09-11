@@ -36,6 +36,7 @@ pub enum ParseError {
     NoPrefixParseFnError(TType),
     NoInfixParseFnError(TType),
     MissingClosing(TType),
+    MissingExpectedToken(TType),
 }
 
 impl Display for ParseError {
@@ -56,6 +57,9 @@ impl Display for ParseError {
                 tok_type
             ),
             Self::MissingClosing(tok_type) => write!(f, "Parse Error - Missing {:?}", tok_type),
+            Self::MissingExpectedToken(tok_type) => {
+                write!(f, "Parse Error - Expecting {:?}", tok_type)
+            }
             Self::ParsingError => write!(f, "Program has parsing Error"),
         }
     }
@@ -209,6 +213,7 @@ impl<'a> Parser<'a> {
             TType::BANG | TType::MINUS => self.parse_prefix_expression().ok(),
             TType::TRUE | TType::FALSE => self.parse_boolean().ok(),
             TType::LPAREN => self.parse_grouped_expression().ok(),
+            TType::IF => self.parse_if_expression().ok(),
             _ => None,
         }
     }
@@ -326,6 +331,54 @@ impl<'a> Parser<'a> {
         }
 
         Ok(exp)
+    }
+
+    fn parse_if_expression(&mut self) -> Result<Expression, ParseError> {
+        let tok = self.cur_token.clone();
+        if self.expect_peek(TType::LPAREN).is_none() {
+            return Err(ParseError::MissingExpectedToken(TType::LPAREN));
+        }
+
+        self.next_tok();
+        let condition = self
+            .parse_expression(Precedent::LOWEST)
+            .ok_or(ParseError::ParsingError)?;
+
+        if self.expect_peek(TType::RPAREN).is_none() {
+            return Err(ParseError::MissingClosing(TType::RPAREN));
+        }
+
+        if self.expect_peek(TType::LBRACE).is_none() {
+            return Err(ParseError::MissingExpectedToken(TType::LBRACE));
+        }
+
+        let consequence = self
+            .parse_block_statement()
+            .map_err(|_err| ParseError::ParsingError)?;
+
+        Ok(Expression::IfExp(ast::IfExpression {
+            token: tok,
+            condition: Box::new(condition),
+            consequence,
+            alternative: None,
+        }))
+    }
+
+    fn parse_block_statement(&mut self) -> Result<ast::BlockStatement, ParseError> {
+        let tok = self.cur_token.clone();
+        let mut statements: Vec<Statement> = vec![];
+
+        self.next_tok();
+        while !self.cur_tok_is(TType::RBRACE) && !self.cur_tok_is(TType::EOF) {
+            let stmt = self.parse_statement().ok_or(ParseError::ParsingError)?;
+            statements.push(stmt);
+            self.next_tok()
+        }
+
+        Ok(ast::BlockStatement {
+            token: tok,
+            statements,
+        })
     }
 }
 
