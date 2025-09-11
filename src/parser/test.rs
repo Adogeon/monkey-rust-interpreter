@@ -175,7 +175,12 @@ fn test_boolean_literal_expression() -> Result<(), String> {
 
 #[test]
 fn test_parsing_prefix_expression() -> Result<(), String> {
-    let prefix_tests = vec![("!5", "!", 5), ("-15", "-", 15)];
+    let prefix_tests: Vec<(&'static str, &'static str, LiteralVal)> = vec![
+        ("!5", "!", 5.into()),
+        ("-15", "-", 15.into()),
+        ("!true;", "!", true.into()),
+        ("!false;", "!", false.into()),
+    ];
 
     for tcase in prefix_tests {
         let l = Lexer::new(tcase.0);
@@ -203,7 +208,7 @@ fn test_parsing_prefix_expression() -> Result<(), String> {
                 "exp.Opartor is not {}, got={}",
                 tcase.1, pe.operator
             );
-            assert!(test_integer_literal(&*pe.right, tcase.2).is_ok());
+            assert!(test_literal_expression(&*pe.right, tcase.2).is_ok());
         } else {
             panic!("exp_stmt is not a PrefixExpression")
         };
@@ -234,6 +239,29 @@ fn test_integer_literal(il: &Expression, value: u64) -> Result<(), String> {
     Ok(())
 }
 
+fn test_boolean_literal(bl: &Expression, value: bool) -> Result<(), String> {
+    if let Expression::BoolLit(literal) = bl {
+        assert_eq!(
+            value, literal.value,
+            "literal.value not {}, got{}",
+            value, literal.value
+        );
+
+        let tok_lit = literal.token_literal().unwrap_or("blank");
+
+        assert_eq!(
+            value.to_string(),
+            tok_lit,
+            "literal.token_literal() not {}, got {}",
+            value.to_string(),
+            tok_lit
+        )
+    } else {
+        panic!("literal is not an boolean Literal")
+    }
+    Ok(())
+}
+
 fn test_identifier(ie: &Expression, value: String) -> Result<(), String> {
     if let Expression::Identifier(ident) = ie {
         assert_eq!(
@@ -256,6 +284,7 @@ fn test_identifier(ie: &Expression, value: String) -> Result<(), String> {
 enum LiteralVal {
     Int(u64),
     Ident(String),
+    Boolean(bool),
 }
 
 impl From<u64> for LiteralVal {
@@ -270,11 +299,17 @@ impl From<&str> for LiteralVal {
     }
 }
 
+impl From<bool> for LiteralVal {
+    fn from(value: bool) -> Self {
+        LiteralVal::Boolean(value)
+    }
+}
+
 fn test_literal_expression(exp: &Expression, value: LiteralVal) -> Result<(), String> {
     match value {
         LiteralVal::Int(val) => test_integer_literal(exp, val),
         LiteralVal::Ident(id) => test_identifier(exp, id),
-        _ => panic!("Mismatch literal type"),
+        LiteralVal::Boolean(bool) => test_boolean_literal(exp, bool),
     }
 }
 
@@ -293,63 +328,126 @@ fn test_infix_expression(
         panic!("exp is not Infix Expression")
     }
 }
+
+#[test]
+fn test_operator_precedence_parsing() -> Result<(), String> {
+    let test_cases = vec![
+        ("-a*b", "((-a) * b)"),
+        ("!-a", "(!(-a))"),
+        ("a + b + c", "((a + b) + c)"),
+        ("a + b - c", "((a + b) - c)"),
+        ("a * b * c", "((a * b) * c)"),
+        ("a * b / c", "((a * b) / c)"),
+        ("a + b / c", "(a + (b / c))"),
+        ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+        ("3 + 4;-5 * 5", "(3 + 4)((-5) * 5)"),
+        ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+        ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+        (
+            "3 + 4 * 5 == 3 * 1 + 4 * 5",
+            "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        ),
+        ("true", "true"),
+        ("false", "false"),
+        ("3 > 5 == false", "((3 > 5) == false)"),
+        ("3 < 5 == true", "((3 < 5) == true)"),
+        ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+        ("(5 + 5) * 2", "((5 + 5) * 2)"),
+        ("2 / (5 + 5)", "(2 / (5 + 5))"),
+        ("-(5 + 5)", "(-(5 + 5))"),
+        ("!(true == true)", "(!(true == true))"),
+    ];
+
+    for (test_index, test) in test_cases.iter().enumerate() {
+        let l = Lexer::new(test.0);
+        let mut p = Parser::new(l);
+        let program = p.parse_program().map_err(|err| -> String {
+            format! {"parse error {err} at test {test_index}"}
+        })?;
+
+        let actual = program.to_string();
+
+        assert_eq!(actual, test.1, "expected={}, got={actual}", test.1);
+    }
+
+    Ok(())
+}
+
 #[test]
 fn test_parsing_infix_expression() -> Result<(), String> {
-    struct Case<'a> {
-        input: &'a str,
-        left_val: u64,
-        operator: &'a str,
-        right_val: u64,
+    struct Case {
+        input: &'static str,
+        left_val: LiteralVal,
+        operator: &'static str,
+        right_val: LiteralVal,
     }
 
     let test_cases: Vec<Case> = vec![
         Case {
             input: "5+5;",
-            left_val: 5,
+            left_val: 5.into(),
             operator: "+",
-            right_val: 5,
+            right_val: 5.into(),
         },
         Case {
             input: "5-5;",
-            left_val: 5,
+            left_val: 5.into(),
             operator: "-",
-            right_val: 5,
+            right_val: 5.into(),
         },
         Case {
             input: "5*5;",
-            left_val: 5,
+            left_val: 5.into(),
             operator: "*",
-            right_val: 5,
+            right_val: 5.into(),
         },
         Case {
             input: "5/5;",
-            left_val: 5,
+            left_val: 5.into(),
             operator: "/",
-            right_val: 5,
+            right_val: 5.into(),
         },
         Case {
             input: "5>5;",
-            left_val: 5,
+            left_val: 5.into(),
             operator: ">",
-            right_val: 5,
+            right_val: 5.into(),
         },
         Case {
             input: "5<5;",
-            left_val: 5,
+            left_val: 5.into(),
             operator: "<",
-            right_val: 5,
+            right_val: 5.into(),
         },
         Case {
             input: "5==5;",
-            left_val: 5,
+            left_val: 5.into(),
             operator: "==",
-            right_val: 5,
+            right_val: 5.into(),
         },
         Case {
             input: "5!=5;",
-            left_val: 5,
+            left_val: 5.into(),
             operator: "!=",
-            right_val: 5,
+            right_val: 5.into(),
+        },
+        Case {
+            input: "true == true;",
+            left_val: true.into(),
+            operator: "==",
+            right_val: true.into(),
+        },
+        Case {
+            input: "true != false;",
+            left_val: true.into(),
+            operator: "!=",
+            right_val: false.into(),
+        },
+        Case {
+            input: "false == false;",
+            left_val: false.into(),
+            operator: "==",
+            right_val: false.into(),
         },
     ];
 
@@ -375,9 +473,9 @@ fn test_parsing_infix_expression() -> Result<(), String> {
 
         assert!(test_infix_expression(
             &inf_stmt.expression,
-            tcase.left_val.into(),
+            tcase.left_val,
             tcase.operator.to_string(),
-            tcase.right_val.into()
+            tcase.right_val
         )
         .is_ok())
     }

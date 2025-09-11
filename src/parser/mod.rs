@@ -35,6 +35,7 @@ pub enum ParseError {
     IntLitParseError(String),
     NoPrefixParseFnError(TType),
     NoInfixParseFnError(TType),
+    MissingClosing(TType),
 }
 
 impl Display for ParseError {
@@ -54,6 +55,7 @@ impl Display for ParseError {
                 "Parse Error - No infix parse function for {:?} found",
                 tok_type
             ),
+            Self::MissingClosing(tok_type) => write!(f, "Parse Error - Missing {:?}", tok_type),
             Self::ParsingError => write!(f, "Program has parsing Error"),
         }
     }
@@ -206,6 +208,7 @@ impl<'a> Parser<'a> {
             TType::INT => self.parse_integer_literal().ok(),
             TType::BANG | TType::MINUS => self.parse_prefix_expression().ok(),
             TType::TRUE | TType::FALSE => self.parse_boolean().ok(),
+            TType::LPAREN => self.parse_grouped_expression().ok(),
             _ => None,
         }
     }
@@ -229,7 +232,7 @@ impl<'a> Parser<'a> {
 
         if let Some(result) = prefix {
             let mut left_exp: Option<Box<Expression>> = Some(Box::new(result));
-            while !self.peek_tok_is(TType::SEMICOLON).is_some()
+            while self.peek_tok_is(TType::SEMICOLON).is_none()
                 && precedence < self.peek_precedence()
             {
                 if self.check_infix_tok(self.peek_token.tok_type.clone()) {
@@ -308,6 +311,21 @@ impl<'a> Parser<'a> {
             left: left,
             right: Box::new(right),
         }))
+    }
+
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
+        self.next_tok();
+        let exp = if let Some(result) = self.parse_expression(Precedent::LOWEST) {
+            result
+        } else {
+            return Err(ParseError::ParsingError);
+        };
+
+        if self.expect_peek(TType::RPAREN).is_none() {
+            return Err(ParseError::MissingClosing(TType::RPAREN));
+        }
+
+        Ok(exp)
     }
 }
 
