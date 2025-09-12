@@ -291,6 +291,30 @@ impl Display for FunctionLiteral {
     }
 }
 
+pub struct CallExpression {
+    pub token: Token,
+    pub function: Box<Expression>,
+    pub arguments: Vec<Expression>,
+}
+
+impl Node for CallExpression {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for CallExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let args_list = self
+            .arguments
+            .iter()
+            .map(|arg| arg.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+        write!(f, "{}({})", self.function, args_list)
+    }
+}
+
 pub enum Expression {
     Identifier(Identifier),
     IntLit(IntegerLiteral),
@@ -299,6 +323,7 @@ pub enum Expression {
     BoolLit(Boolean),
     IfExp(IfExpression),
     FncLit(FunctionLiteral),
+    CallExp(CallExpression),
 }
 
 impl Node for Expression {
@@ -311,6 +336,7 @@ impl Node for Expression {
             Self::BoolLit(bl) => bl.token_literal(),
             Self::IfExp(ife) => ife.token_literal(),
             Self::FncLit(fnl) => fnl.token_literal(),
+            Self::CallExp(ce) => ce.token_literal(),
         }
     }
 }
@@ -325,6 +351,7 @@ impl Display for Expression {
             Self::BoolLit(bl) => write!(f, "{bl}"),
             Self::IfExp(ife) => write!(f, "{ife}"),
             Self::FncLit(fnl) => write!(f, "{fnl}"),
+            Self::CallExp(ce) => write!(f, "{ce}"),
         }
     }
 }
