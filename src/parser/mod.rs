@@ -214,6 +214,7 @@ impl<'a> Parser<'a> {
             TType::TRUE | TType::FALSE => self.parse_boolean().ok(),
             TType::LPAREN => self.parse_grouped_expression().ok(),
             TType::IF => self.parse_if_expression().ok(),
+            TType::FUNCTION => self.parse_function_literal().ok(),
             _ => None,
         }
     }
@@ -391,6 +392,64 @@ impl<'a> Parser<'a> {
             token: tok,
             statements,
         })
+    }
+
+    fn parse_function_literal(&mut self) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+
+        if self.expect_peek(TType::LPAREN).is_none() {
+            return Err(ParseError::MissingExpectedToken(TType::LPAREN));
+        }
+
+        let parameters = self
+            .parse_function_parameters()
+            .map_err(|_e| ParseError::ParsingError)?;
+
+        if self.expect_peek(TType::LBRACE).is_none() {
+            return Err(ParseError::MissingExpectedToken(TType::LBRACE));
+        }
+
+        let body = self
+            .parse_block_statement()
+            .map_err(|_e| ParseError::ParsingError)?;
+
+        Ok(Expression::FncLit(ast::FunctionLiteral {
+            token,
+            parameters,
+            body,
+        }))
+    }
+
+    fn parse_function_parameters(&mut self) -> Result<Vec<Expression>, ParseError> {
+        let mut identifiers: Vec<Expression> = vec![];
+
+        if self.peek_tok_is(TType::RPAREN).is_some() {
+            self.next_tok();
+            return Ok(identifiers);
+        }
+
+        self.next_tok();
+        let mut ident = Expression::Identifier(ast::Identifier {
+            token: self.cur_token.clone(),
+            value: self.cur_token.clone().tok_literal,
+        });
+        identifiers.push(ident);
+
+        while self.peek_tok_is(TType::COMMA).is_some() {
+            self.next_tok();
+            self.next_tok();
+            ident = Expression::Identifier(ast::Identifier {
+                token: self.cur_token.clone(),
+                value: self.cur_token.clone().tok_literal,
+            });
+            identifiers.push(ident);
+        }
+
+        if self.expect_peek(TType::RPAREN).is_none() {
+            return Err(ParseError::MissingExpectedToken(TType::RPAREN));
+        }
+
+        Ok(identifiers)
     }
 }
 

@@ -658,3 +658,47 @@ fn test_function_literal_parsing() -> Result<(), String> {
 
     Ok(())
 }
+
+#[test]
+fn test_function_parameter_parsing() -> Result<(), String> {
+    let test_case = vec![
+        ("fn() {}", vec![]),
+        ("fn(x) {}", vec!["x"]),
+        ("fn(x,y,z) {}", vec!["x", "y", "z"]),
+    ];
+
+    for (input, expected) in test_case {
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program = p
+            .parse_program()
+            .map_err(|err| format!("Parsing Error: {err} with {input}"))?;
+
+        let function = program
+            .statements
+            .get(0)
+            .and_then(|stmt| match stmt {
+                Statement::ExpStmt(s) => Some(s),
+                _ => None,
+            })
+            .and_then(|exp_stmt| match &exp_stmt.expression {
+                Expression::FncLit(s) => Some(s),
+                _ => None,
+            })
+            .ok_or("Can't extract function literal from program.statements[0]")?;
+
+        assert_eq!(
+            expected.len(),
+            function.parameters.len(),
+            "parameters length is wrong. want {}, got{}",
+            expected.len(),
+            function.parameters.len()
+        );
+
+        for (index, &ident) in expected.iter().enumerate() {
+            assert!(test_literal_expression(&function.parameters[index], ident.into()).is_ok());
+        }
+    }
+
+    Ok(())
+}
