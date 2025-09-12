@@ -702,3 +702,47 @@ fn test_function_parameter_parsing() -> Result<(), String> {
 
     Ok(())
 }
+
+#[test]
+fn test_call_expression_parsing() -> Result<(), String> {
+    let input = "add(1,2*3,4+5);";
+
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Parsing error: {err}"))?;
+
+    assert_eq!(
+        1,
+        program.statements.len(),
+        "program.statements does not contain 1 statement. got={}",
+        program.statements.len()
+    );
+
+    let exp = program
+        .statements
+        .get(0)
+        .ok_or("can't find program.statement[0]")
+        .and_then(|stmt| match stmt {
+            Statement::ExpStmt(s) => Ok(s),
+            _ => Err("program.statement[0] is not a Expression Statement"),
+        })
+        .and_then(|exp_stmt| match &exp_stmt.expression {
+            Expression::CallExp(s) => Ok(s),
+            _ => Err("exp_stmt is not a Function call expression"),
+        })?;
+
+    assert!(test_identifier(&exp.function, "add".into()).is_ok());
+    assert_eq!(
+        3,
+        exp.arguments.len(),
+        "wrong arguments' length, got={}",
+        exp.arguments.len()
+    );
+
+    assert!(test_literal_expression(&exp.arguments[0], 1.into()).is_ok());
+    assert!(test_infix_expression(&exp.arguments[1], 2.into(), "*".into(), 3.into()).is_ok());
+    assert!(test_infix_expression(&exp.arguments[1], 4.into(), "+".into(), 4.into()).is_ok());
+    Ok(())
+}
