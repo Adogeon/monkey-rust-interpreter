@@ -600,3 +600,61 @@ fn test_if_else_expression() -> Result<(), String> {
 
     Ok(())
 }
+
+#[test]
+fn test_function_literal_parsing() -> Result<(), String> {
+    let input = "fn(x,y) {x + y;}";
+
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Program parsed error: {err}"))?;
+
+    assert_eq!(
+        1,
+        program.statements.len(),
+        "Program statements does not contain 1 statements. got={}",
+        program.statements.len()
+    );
+
+    let exp_stmt = if let Statement::ExpStmt(exp_stmt) = &program.statements[0] {
+        exp_stmt
+    } else {
+        panic!("program.statements[0] is not a Expression Statement");
+    };
+
+    let fnc_lit = if let Expression::FncLit(exp) = &exp_stmt.expression {
+        exp
+    } else {
+        panic!("exp_stmt expression is not Function Literal");
+    };
+
+    assert_eq!(
+        2,
+        fnc_lit.parameters.len(),
+        "function literal parameter wrong, want 2, got ={}",
+        fnc_lit.parameters.len()
+    );
+
+    assert!(test_literal_expression(&fnc_lit.parameters[0], "x".into()).is_ok());
+    assert!(test_literal_expression(&fnc_lit.parameters[1], "y".into()).is_ok());
+
+    assert_eq!(
+        1,
+        fnc_lit.body.statements.len(),
+        "fnc_lit.body.statements has not 1 statements. got={}",
+        fnc_lit.body.statements.len()
+    );
+
+    if let Statement::ExpStmt(body_stmt) = &fnc_lit.body.statements[0] {
+        assert!(
+            test_infix_expression(&body_stmt.expression, "x".into(), "+".into(), "y".into())
+                .is_ok()
+        );
+    } else {
+        panic!("fnc_lit.body.statements[0] is not an Expression Statement")
+    }
+
+    Ok(())
+}

@@ -278,6 +278,7 @@ impl<'a> Parser<'a> {
             .tok_literal
             .parse()
             .map_err(|_| ParseError::IntLitParseError(int_token.tok_literal.clone()))?;
+
         Ok(Expression::IntLit(ast::IntegerLiteral {
             token: int_token,
             value,
@@ -287,12 +288,12 @@ impl<'a> Parser<'a> {
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
         let token = self.cur_token.clone();
         let literal = self.cur_token.tok_literal.clone();
+
         self.next_tok();
-        let right = if let Some(exp) = self.parse_expression(Precedent::PREFIX) {
-            exp
-        } else {
-            return Err(ParseError::ParsingError);
-        };
+        let right = self
+            .parse_expression(Precedent::PREFIX)
+            .ok_or(ParseError::ParsingError)?;
+
         Ok(Expression::PreExp(ast::PrefixExpression {
             token,
             operator: literal,
@@ -304,12 +305,12 @@ impl<'a> Parser<'a> {
         let token = self.cur_token.clone();
         let literal = self.cur_token.tok_literal.clone();
         let precedence = self.cur_precedence();
+
         self.next_tok();
-        let right = if let Some(exp) = self.parse_expression(precedence) {
-            exp
-        } else {
-            return Err(ParseError::ParsingError);
-        };
+        let right = self
+            .parse_expression(precedence)
+            .ok_or(ParseError::ParsingError)?;
+
         Ok(Expression::InExp(ast::InfixExpression {
             token,
             operator: literal,
@@ -320,11 +321,9 @@ impl<'a> Parser<'a> {
 
     fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
         self.next_tok();
-        let exp = if let Some(result) = self.parse_expression(Precedent::LOWEST) {
-            result
-        } else {
-            return Err(ParseError::ParsingError);
-        };
+        let exp = self
+            .parse_expression(Precedent::LOWEST)
+            .ok_or(ParseError::ParsingError)?;
 
         if self.expect_peek(TType::RPAREN).is_none() {
             return Err(ParseError::MissingClosing(TType::RPAREN));

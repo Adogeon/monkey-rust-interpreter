@@ -264,6 +264,33 @@ impl Display for IfExpression {
     }
 }
 
+pub struct FunctionLiteral {
+    pub token: Token,
+    pub parameters: Vec<Expression>,
+    pub body: BlockStatement,
+}
+
+impl Node for FunctionLiteral {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for FunctionLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} (", self.token.tok_literal)?;
+        let para_lists = self
+            .parameters
+            .iter()
+            .map(|para| para.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+        write!(f, "{} )", para_lists)?;
+        write!(f, "{}", self.body)?;
+        Ok(())
+    }
+}
+
 pub enum Expression {
     Identifier(Identifier),
     IntLit(IntegerLiteral),
@@ -271,6 +298,7 @@ pub enum Expression {
     InExp(InfixExpression),
     BoolLit(Boolean),
     IfExp(IfExpression),
+    FncLit(FunctionLiteral),
 }
 
 impl Node for Expression {
@@ -282,6 +310,7 @@ impl Node for Expression {
             Self::InExp(ie) => ie.token_literal(),
             Self::BoolLit(bl) => bl.token_literal(),
             Self::IfExp(ife) => ife.token_literal(),
+            Self::FncLit(fnl) => fnl.token_literal(),
         }
     }
 }
@@ -295,6 +324,7 @@ impl Display for Expression {
             Self::InExp(ie) => write!(f, "{ie}"),
             Self::BoolLit(bl) => write!(f, "{bl}"),
             Self::IfExp(ife) => write!(f, "{ife}"),
+            Self::FncLit(fnl) => write!(f, "{fnl}"),
         }
     }
 }
