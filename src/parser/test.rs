@@ -2,7 +2,7 @@ use super::*;
 use crate::ast::{Node, Statement};
 use crate::lexer::Lexer;
 
-fn test_let_statement(stmt: &Statement, name: String) {
+fn test_let_statement(stmt: &Statement, name: String) -> Result<(), String> {
     let stmt_literal = stmt.token_literal().unwrap_or("blank");
     assert_eq!(
         "let", stmt_literal,
@@ -19,33 +19,43 @@ fn test_let_statement(stmt: &Statement, name: String) {
     } else {
         panic!("let stmt is not belong of kind letStmt")
     }
+
+    Ok(())
 }
 
 #[test]
 fn test_let_statments() -> Result<(), String> {
-    let input = "
-        let x = 5;
-        let y = 10;
-        let foobar = 838383;
-    ";
+    let test_cases: Vec<(&str, &str, LiteralVal)> = vec![
+        ("let x = 5;", "x", 5.into()),
+        ("let y = true;", "y", true.into()),
+        ("let foobar = y;", "foobar", "y".into()),
+    ];
 
-    let l = Lexer::new(&input);
-    let mut p = Parser::new(l);
-    let program = match p.parse_program() {
-        Err(_e) => return Err(String::from("ParseProgram() error")),
-        Ok(p) => p,
-    };
-    assert_eq!(
-        3,
-        program.statements.len(),
-        "program.Statements does not contain 3 statements.got={}",
-        program.statements.len()
-    );
+    for (input, expected_identifier, expected_value) in test_cases {
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+        let program = p
+            .parse_program()
+            .map_err(|err| format!("Parsing error: {err}"))?;
 
-    let test_cases = vec!["x", "y", "foobar"];
-    for (i, tc) in test_cases.iter().enumerate() {
-        let stmt = &program.statements[i];
-        test_let_statement(stmt, String::from(*tc));
+        assert_eq!(
+            1,
+            program.statements.len(),
+            "program.Statements does not contain 1 statement. got={}",
+            program.statements.len()
+        );
+
+        let stmt = &program.statements[0];
+
+        assert!(test_let_statement(stmt, expected_identifier.to_string()).is_ok());
+
+        if let Statement::LetStmt(s) = stmt {
+            if let Some(val) = s.value.as_ref() {
+                assert!(test_literal_expression(val, expected_value).is_ok());
+            } else {
+                panic!("Expected a value but got None");
+            }
+        }
     }
 
     Ok(())
