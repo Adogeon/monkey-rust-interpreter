@@ -25,6 +25,7 @@ fn tok_preceden_look_up(tok_type: TType) -> Precedent {
         TType::SLASH => Precedent::PRODUCT,
         TType::ASTERISK => Precedent::PRODUCT,
         TType::ASSIGN => Precedent::PRODUCT,
+        TType::LPAREN => Precedent::CALL,
         _ => Precedent::LOWEST,
     }
 }
@@ -94,13 +95,10 @@ impl<'a> Parser<'a> {
         let mut program = ast::Program { statements: vec![] };
 
         while self.cur_token.tok_type != TType::EOF {
-            if let Some(stmt) = self.parse_statement() {
-                program.statements.push(stmt);
-            } else {
-                self.append_errors(ParseError::UnexpectedToken(
-                    self.cur_token.tok_literal.clone(),
-                ));
-            }
+            self.parse_statement()
+                .map(|stmt| program.statements.push(stmt))
+                .unwrap_or_else(|err| self.append_errors(err));
+
             self.next_tok()
         }
 
@@ -114,7 +112,7 @@ impl<'a> Parser<'a> {
         Ok(program)
     }
 
-    fn parse_statement(&mut self) -> Option<Statement> {
+    fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         match self.cur_token.tok_type {
             TType::LET => self.parse_let_stmt(),
             TType::RETURN => self.parse_return_stmt(),
@@ -122,17 +120,19 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_let_stmt(&mut self) -> Option<Statement> {
+    fn parse_let_stmt(&mut self) -> Result<Statement, ParseError> {
         let stmt_token = self.cur_token.clone();
 
-        self.expect_peek(TType::IDENT)?;
+        self.expect_peek(TType::IDENT)
+            .ok_or(ParseError::MissingExpectedToken(TType::IDENT))?;
 
         let stmt_name = ast::Identifier {
             token: self.cur_token.clone(),
             value: self.cur_token.tok_literal.clone(),
         };
 
-        self.expect_peek(TType::ASSIGN)?;
+        self.expect_peek(TType::ASSIGN)
+            .ok_or(ParseError::MissingExpectedToken(TType::ASSIGN))?;
 
         while !self.cur_tok_is(TType::SEMICOLON) {
             self.next_tok();
@@ -144,10 +144,10 @@ impl<'a> Parser<'a> {
             value: None,
         };
 
-        Some(Statement::LetStmt(let_stmt))
+        Ok(Statement::LetStmt(let_stmt))
     }
 
-    fn parse_return_stmt(&mut self) -> Option<Statement> {
+    fn parse_return_stmt(&mut self) -> Result<Statement, ParseError> {
         let mut stmt_value = None;
         let ret_stmt = ast::ReturnStatement {
             stmt_token: self.cur_token.clone(),
@@ -160,17 +160,17 @@ impl<'a> Parser<'a> {
             self.next_tok();
         }
 
-        Some(Statement::RetStmt(ret_stmt))
+        Ok(Statement::RetStmt(ret_stmt))
     }
 
-    fn parse_expression_stmt(&mut self) -> Option<Statement> {
+    fn parse_expression_stmt(&mut self) -> Result<Statement, ParseError> {
         let exp_tok = self.cur_token.clone();
         let express = self.parse_expression(Precedent::LOWEST)?;
         if self.peek_tok_is(TType::SEMICOLON).is_some() {
             self.next_tok();
         }
 
-        Some(Statement::ExpStmt(ast::ExpressionStatement {
+        Ok(Statement::ExpStmt(ast::ExpressionStatement {
             stmt_token: exp_tok,
             expression: express,
         }))
@@ -206,20 +206,20 @@ impl<'a> Parser<'a> {
         tok_preceden_look_up(self.peek_token.tok_type.clone())
     }
 
-    fn prefix_parse_fn(&mut self, tok_type: TType) -> Option<Expression> {
+    fn prefix_parse_fn(&mut self, tok_type: TType) -> Result<Expression, ParseError> {
         match tok_type {
-            TType::IDENT => self.parse_identifier().ok(),
-            TType::INT => self.parse_integer_literal().ok(),
-            TType::BANG | TType::MINUS => self.parse_prefix_expression().ok(),
-            TType::TRUE | TType::FALSE => self.parse_boolean().ok(),
-            TType::LPAREN => self.parse_grouped_expression().ok(),
-            TType::IF => self.parse_if_expression().ok(),
-            TType::FUNCTION => self.parse_function_literal().ok(),
-            _ => None,
+            TType::IDENT => self.parse_identifier(),
+            TType::INT => self.parse_integer_literal(),
+            TType::BANG | TType::MINUS => self.parse_prefix_expression(),
+            TType::TRUE | TType::FALSE => self.parse_boolean(),
+            TType::LPAREN => self.parse_grouped_expression(),
+            TType::IF => self.parse_if_expression(),
+            TType::FUNCTION => self.parse_function_literal(),
+            _ => Err(ParseError::NoPrefixParseFnError(tok_type)),
         }
     }
 
-    fn check_infix_tok(&self, tok_type: TType) -> bool {
+    fn check_infix_tok(&self, tok_type: &TType) -> bool {
         matches!(
             tok_type,
             TType::PLUS
@@ -230,32 +230,28 @@ impl<'a> Parser<'a> {
                 | TType::NOTEQ
                 | TType::LT
                 | TType::GT
+                | TType::LPAREN
         )
     }
 
-    fn parse_expression(&mut self, precedence: Precedent) -> Option<Expression> {
-        let prefix = self.prefix_parse_fn(self.cur_token.tok_type.clone());
+    fn parse_expression(&mut self, precedence: Precedent) -> Result<Expression, ParseError> {
+        let prefix = self.prefix_parse_fn(self.cur_token.tok_type.clone())?;
 
-        if let Some(result) = prefix {
-            let mut left_exp: Option<Box<Expression>> = Some(Box::new(result));
-            while self.peek_tok_is(TType::SEMICOLON).is_none()
-                && precedence < self.peek_precedence()
-            {
-                if self.check_infix_tok(self.peek_token.tok_type.clone()) {
-                    self.next_tok();
-                    if let Some(exp) = self.parse_infix_expression(left_exp.take().unwrap()).ok() {
-                        left_exp = Some(Box::new(exp));
-                    } else {
-                        break;
-                    }
-                } else {
-                    break;
-                }
+        let mut left_exp: Option<Box<Expression>> = Some(Box::new(prefix));
+        while self.peek_tok_is(TType::SEMICOLON).is_none() && precedence < self.peek_precedence() {
+            let peek_tok = self.peek_token.tok_type.clone();
+            if self.check_infix_tok(&peek_tok) {
+                self.next_tok();
+                let exp = match peek_tok {
+                    TType::LPAREN => self.parse_call_expression(left_exp.take().unwrap())?,
+                    _ => self.parse_infix_expression(left_exp.take().unwrap())?,
+                };
+                left_exp = Some(Box::new(exp));
+            } else {
+                break;
             }
-            left_exp.map(|exp| *exp)
-        } else {
-            None
         }
+        left_exp.map(|exp| *exp).ok_or(ParseError::ParsingError)
     }
 
     fn parse_identifier(&self) -> Result<Expression, ParseError> {
@@ -291,9 +287,7 @@ impl<'a> Parser<'a> {
         let literal = self.cur_token.tok_literal.clone();
 
         self.next_tok();
-        let right = self
-            .parse_expression(Precedent::PREFIX)
-            .ok_or(ParseError::ParsingError)?;
+        let right = self.parse_expression(Precedent::PREFIX)?;
 
         Ok(Expression::PreExp(ast::PrefixExpression {
             token,
@@ -308,9 +302,7 @@ impl<'a> Parser<'a> {
         let precedence = self.cur_precedence();
 
         self.next_tok();
-        let right = self
-            .parse_expression(precedence)
-            .ok_or(ParseError::ParsingError)?;
+        let right = self.parse_expression(precedence)?;
 
         Ok(Expression::InExp(ast::InfixExpression {
             token,
@@ -322,9 +314,7 @@ impl<'a> Parser<'a> {
 
     fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
         self.next_tok();
-        let exp = self
-            .parse_expression(Precedent::LOWEST)
-            .ok_or(ParseError::ParsingError)?;
+        let exp = self.parse_expression(Precedent::LOWEST)?;
 
         if self.expect_peek(TType::RPAREN).is_none() {
             return Err(ParseError::MissingClosing(TType::RPAREN));
@@ -340,9 +330,7 @@ impl<'a> Parser<'a> {
         }
 
         self.next_tok();
-        let condition = self
-            .parse_expression(Precedent::LOWEST)
-            .ok_or(ParseError::ParsingError)?;
+        let condition = self.parse_expression(Precedent::LOWEST)?;
 
         if self.expect_peek(TType::RPAREN).is_none() {
             return Err(ParseError::MissingClosing(TType::RPAREN));
@@ -383,7 +371,7 @@ impl<'a> Parser<'a> {
 
         self.next_tok();
         while !self.cur_tok_is(TType::RBRACE) && !self.cur_tok_is(TType::EOF) {
-            let stmt = self.parse_statement().ok_or(ParseError::ParsingError)?;
+            let stmt = self.parse_statement()?;
             statements.push(stmt);
             self.next_tok()
         }
@@ -450,6 +438,46 @@ impl<'a> Parser<'a> {
         }
 
         Ok(identifiers)
+    }
+
+    fn parse_call_expression(
+        &mut self,
+        function: Box<Expression>,
+    ) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        let arguments = self.parse_call_arguments()?;
+
+        Ok(Expression::CallExp(ast::CallExpression {
+            token,
+            function,
+            arguments,
+        }))
+    }
+
+    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
+        let mut args: Vec<Expression> = vec![];
+
+        if self.peek_tok_is(TType::RPAREN).is_some() {
+            self.next_tok();
+            return Ok(args);
+        }
+
+        self.next_tok();
+
+        self.parse_expression(Precedent::LOWEST)
+            .map(|exp| args.push(exp))?;
+        while self.peek_tok_is(TType::COMMA).is_some() {
+            self.next_tok();
+            self.next_tok();
+            self.parse_expression(Precedent::LOWEST)
+                .map(|exp| args.push(exp))?;
+        }
+
+        if self.expect_peek(TType::RPAREN).is_none() {
+            return Err(ParseError::MissingClosing(TType::RPAREN));
+        }
+
+        Ok(args)
     }
 }
 

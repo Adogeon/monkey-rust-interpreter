@@ -356,6 +356,15 @@ fn test_operator_precedence_parsing() -> Result<(), String> {
         ("2 / (5 + 5)", "(2 / (5 + 5))"),
         ("-(5 + 5)", "(-(5 + 5))"),
         ("!(true == true)", "(!(true == true))"),
+        ("a + add(b*c) + d", "((a + add((b * c))) + d)"),
+        (
+            "add(a,b,1,2*3,4 + 5, add(6,7 * 8))",
+            "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+        ),
+        (
+            "add(a + b + c*d/f+g)",
+            "add((((a + b) + ((c * d) / f)) + g))",
+        ),
     ];
 
     for (test_index, test) in test_cases.iter().enumerate() {
@@ -743,6 +752,6 @@ fn test_call_expression_parsing() -> Result<(), String> {
 
     assert!(test_literal_expression(&exp.arguments[0], 1.into()).is_ok());
     assert!(test_infix_expression(&exp.arguments[1], 2.into(), "*".into(), 3.into()).is_ok());
-    assert!(test_infix_expression(&exp.arguments[1], 4.into(), "+".into(), 4.into()).is_ok());
+    assert!(test_infix_expression(&exp.arguments[2], 4.into(), "+".into(), 5.into()).is_ok());
     Ok(())
 }
