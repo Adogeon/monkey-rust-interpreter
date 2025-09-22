@@ -50,11 +50,7 @@ fn test_let_statments() -> Result<(), String> {
         assert!(test_let_statement(stmt, expected_identifier.to_string()).is_ok());
 
         if let Statement::LetStmt(s) = stmt {
-            if let Some(val) = s.value.as_ref() {
-                assert!(test_literal_expression(val, expected_value).is_ok());
-            } else {
-                panic!("Expected a value but got None");
-            }
+            assert!(test_literal_expression(&s.value, expected_value).is_ok());
         }
     }
 

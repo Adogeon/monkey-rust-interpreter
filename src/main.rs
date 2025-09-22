@@ -1,8 +1,10 @@
-pub mod ast;
-pub mod lexer;
-pub mod parser;
-pub mod repl;
-pub mod token;
+mod ast;
+mod evaluator;
+mod lexer;
+mod object;
+mod parser;
+mod repl;
+mod token;
 
 use std::io::{stdin, stdout};
 

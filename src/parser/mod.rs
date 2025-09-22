@@ -134,31 +134,35 @@ impl<'a> Parser<'a> {
         self.expect_peek(TType::ASSIGN)
             .ok_or(ParseError::MissingExpectedToken(TType::ASSIGN))?;
 
-        while !self.cur_tok_is(TType::SEMICOLON) {
+        self.next_tok();
+        let value = self.parse_expression(Precedent::LOWEST)?;
+
+        if self.peek_tok_is(TType::SEMICOLON).is_some() {
             self.next_tok();
         }
 
         let let_stmt = ast::LetStatement {
             stmt_token,
             name: stmt_name,
-            value: None,
+            value,
         };
 
         Ok(Statement::LetStmt(let_stmt))
     }
 
     fn parse_return_stmt(&mut self) -> Result<Statement, ParseError> {
-        let mut stmt_value = None;
-        let ret_stmt = ast::ReturnStatement {
-            stmt_token: self.cur_token.clone(),
-            return_value: stmt_value,
-        };
-
+        let token = self.cur_token.clone();
         self.next_tok();
+        let stmt_value = self.parse_expression(Precedent::LOWEST)?;
 
-        while !self.cur_tok_is(TType::SEMICOLON) {
+        if self.peek_tok_is(TType::SEMICOLON).is_some() {
             self.next_tok();
         }
+
+        let ret_stmt = ast::ReturnStatement {
+            stmt_token: token,
+            return_value: stmt_value,
+        };
 
         Ok(Statement::RetStmt(ret_stmt))
     }

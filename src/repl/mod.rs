@@ -1,5 +1,5 @@
 use crate::lexer::Lexer;
-use crate::token::TType;
+use crate::parser::{ParseError, Parser};
 use std::io::{self, BufRead, Write};
 
 pub fn start(mut in_handler: io::StdinLock, mut out_handler: io::StdoutLock) {
@@ -15,14 +15,20 @@ pub fn start(mut in_handler: io::StdinLock, mut out_handler: io::StdoutLock) {
             break;
         }
 
-        let mut l = Lexer::new(&buffer);
-
-        loop {
-            let tok = l.next_token();
-            if tok.tok_type == TType::EOF {
-                break;
+        let l = Lexer::new(&buffer);
+        let mut p = Parser::new(l);
+        let program = match p.parse_program() {
+            Ok(prog) => prog,
+            Err(err) => {
+                print_parser_errors(&mut out_handler, err);
+                continue;
             }
-            writeln!(out_handler, "Token:{:?}", tok).unwrap();
-        }
+        };
+
+        writeln!(out_handler, "{}", program).unwrap();
     }
+}
+
+fn print_parser_errors(out_handler: &mut io::StdoutLock, error: ParseError) {
+    writeln!(out_handler, "{error}").unwrap();
 }

@@ -17,13 +17,13 @@ fn test_write_string() {
                     },
                     value: String::from("myVar"),
                 },
-                value: Some(Expression::Identifier(Identifier {
+                value: Expression::Identifier(Identifier {
                     token: Token {
                         tok_type: TType::IDENT,
                         tok_literal: String::from("anotherVar"),
                     },
                     value: String::from("anotherVar"),
-                })),
+                }),
             })),
         ],
     };

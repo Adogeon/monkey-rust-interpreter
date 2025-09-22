@@ -45,7 +45,7 @@ impl Display for Program {
 pub struct LetStatement {
     pub stmt_token: Token,
     pub name: Identifier,
-    pub value: Option<Expression>,
+    pub value: Expression,
 }
 
 impl Node for LetStatement {
@@ -57,16 +57,15 @@ impl Node for LetStatement {
 impl Display for LetStatement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {} = ", self.token_literal().unwrap(), self.name)?;
-        if let Some(stmt_value) = &self.value {
-            write!(f, "{stmt_value}")?;
-        }
+        write!(f, "{}", self.value)?;
+
         write!(f, ";")
     }
 }
 
 pub struct ReturnStatement {
     pub stmt_token: Token,
-    pub return_value: Option<Expression>,
+    pub return_value: Expression,
 }
 
 impl Node for ReturnStatement {
@@ -78,9 +77,7 @@ impl Node for ReturnStatement {
 impl Display for ReturnStatement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} ", self.token_literal().unwrap())?;
-        if let Some(stmt_value) = &self.return_value {
-            write!(f, "{stmt_value}")?;
-        }
+        write!(f, "{}", self.return_value)?;
         write!(f, ";")
     }
 }
