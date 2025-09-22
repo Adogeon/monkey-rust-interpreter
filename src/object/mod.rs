@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 pub enum Object {
-    INTEGER(u64),
+    INTEGER(i64),
     BOOLEAN(bool),
     NULL,
 }

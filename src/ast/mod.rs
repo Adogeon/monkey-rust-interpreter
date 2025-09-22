@@ -168,7 +168,7 @@ impl Display for Identifier {
 
 pub struct IntegerLiteral {
     pub token: Token,
-    pub value: u64,
+    pub value: i64,
 }
 
 impl Node for IntegerLiteral {

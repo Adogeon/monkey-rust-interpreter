@@ -4,7 +4,7 @@ use crate::{lexer::Lexer, parser::Parser};
 
 #[test]
 fn test_eval_integer_expression() -> Result<(), String> {
-    let test_cases: Vec<(&str, u64)> = vec![("5", 5), ("10", 10)];
+    let test_cases: Vec<(&str, i64)> = vec![("5", 5), ("10", 10)];
 
     for (input, expected) in test_cases {
         let evaluated = test_eval(input)?;
@@ -23,7 +23,7 @@ fn test_eval(input: &str) -> Result<Object, String> {
     Ok(eval(Box::new(program)))
 }
 
-fn test_integer_object(obj: Object, expected: u64) -> Result<(), String> {
+fn test_integer_object(obj: Object, expected: i64) -> Result<(), String> {
     if let Object::INTEGER(val) = obj {
         if val == expected {
             Ok(())

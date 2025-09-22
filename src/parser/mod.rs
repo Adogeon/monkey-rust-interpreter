@@ -275,7 +275,7 @@ impl<'a> Parser<'a> {
 
     fn parse_integer_literal(&self) -> Result<Expression, ParseError> {
         let int_token = self.cur_token.clone();
-        let value: u64 = int_token
+        let value: i64 = int_token
             .tok_literal
             .parse()
             .map_err(|_| ParseError::IntLitParseError(int_token.tok_literal.clone()))?;

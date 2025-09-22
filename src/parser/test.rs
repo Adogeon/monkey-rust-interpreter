@@ -222,7 +222,7 @@ fn test_parsing_prefix_expression() -> Result<(), String> {
     Ok(())
 }
 
-fn test_integer_literal(il: &Expression, value: u64) -> Result<(), String> {
+fn test_integer_literal(il: &Expression, value: i64) -> Result<(), String> {
     if let Expression::IntLit(literal) = il {
         assert_eq!(
             value, literal.value,
@@ -288,13 +288,13 @@ fn test_identifier(ie: &Expression, value: String) -> Result<(), String> {
 
 #[derive(PartialEq, Debug)]
 enum LiteralVal {
-    Int(u64),
+    Int(i64),
     Ident(String),
     Boolean(bool),
 }
 
-impl From<u64> for LiteralVal {
-    fn from(value: u64) -> Self {
+impl From<i64> for LiteralVal {
+    fn from(value: i64) -> Self {
         LiteralVal::Int(value)
     }
 }
