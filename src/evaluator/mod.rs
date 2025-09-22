@@ -16,13 +16,31 @@ impl Evaluable for Expression {
         match *self {
             Expression::IntLit(int_lit) => Object::INTEGER(int_lit.value),
             Expression::Identifier(identifier) => todo!(),
-            Expression::PreExp(prefix_expression) => todo!(),
+            Expression::PreExp(prefix_expression) => {
+                let right = eval(prefix_expression.right);
+                eval_prefix_expression(prefix_expression.operator, right)
+            }
             Expression::InExp(infix_expression) => todo!(),
             Expression::BoolLit(boolean) => Object::BOOLEAN(boolean.value),
             Expression::IfExp(if_expression) => todo!(),
             Expression::FncLit(function_literal) => todo!(),
             Expression::CallExp(call_expression) => todo!(),
         }
+    }
+}
+
+fn eval_prefix_expression(operator: String, right: Object) -> Object {
+    match operator.as_str() {
+        "!" => eval_bang_operator_expression(right),
+        _ => Object::NULL,
+    }
+}
+
+fn eval_bang_operator_expression(right: Object) -> Object {
+    match right {
+        Object::NULL => Object::BOOLEAN(true),
+        Object::BOOLEAN(s) => Object::BOOLEAN(!s),
+        _ => Object::BOOLEAN(false),
     }
 }
 

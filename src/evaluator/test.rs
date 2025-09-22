@@ -61,3 +61,21 @@ fn test_boolean_object(input: Object, expected: bool) -> Result<(), String> {
         Err(format!("input is not a Boolean Object"))
     }
 }
+
+#[test]
+fn test_bang_operator() -> Result<(), String> {
+    let test_cases = vec![
+        ("!true", false),
+        ("!false", true),
+        ("!5", false),
+        ("!!true", true),
+        ("!!false", false),
+        ("!!5", true),
+    ];
+
+    for (input, expected) in test_cases {
+        let evaluated = test_eval(input)?;
+        assert!(test_boolean_object(evaluated, expected).is_ok());
+    }
+    Ok(())
+}
