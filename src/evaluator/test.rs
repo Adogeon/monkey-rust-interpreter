@@ -37,3 +37,27 @@ fn test_integer_object(obj: Object, expected: u64) -> Result<(), String> {
         Err(String::from("object is not an Integer Object"))
     }
 }
+
+#[test]
+fn test_eval_boolean_expression() -> Result<(), String> {
+    let test_cases = vec![("true", true), ("false", false)];
+
+    for (input, expected) in test_cases {
+        let evaluated = test_eval(input)?;
+        assert!(test_boolean_object(evaluated, expected).is_ok())
+    }
+
+    Ok(())
+}
+
+fn test_boolean_object(input: Object, expected: bool) -> Result<(), String> {
+    if let Object::BOOLEAN(s) = input {
+        if s == expected {
+            Ok(())
+        } else {
+            Err(format!("expected {expected}, got={s}"))
+        }
+    } else {
+        Err(format!("input is not a Boolean Object"))
+    }
+}

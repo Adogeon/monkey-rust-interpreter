@@ -1,3 +1,4 @@
+use crate::evaluator::eval;
 use crate::lexer::Lexer;
 use crate::parser::{ParseError, Parser};
 use std::io::{self, BufRead, Write};
@@ -25,7 +26,9 @@ pub fn start(mut in_handler: io::StdinLock, mut out_handler: io::StdoutLock) {
             }
         };
 
-        writeln!(out_handler, "{}", program).unwrap();
+        let evaluated = eval(Box::new(program));
+
+        writeln!(out_handler, "{}", evaluated).unwrap();
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::ast::{Expression, Program, Statement};
 use crate::object::Object;
 
-trait Evaluable {
+pub trait Evaluable {
     fn eval(self: Box<Self>) -> Object;
 }
 
@@ -18,7 +18,7 @@ impl Evaluable for Expression {
             Expression::Identifier(identifier) => todo!(),
             Expression::PreExp(prefix_expression) => todo!(),
             Expression::InExp(infix_expression) => todo!(),
-            Expression::BoolLit(boolean) => todo!(),
+            Expression::BoolLit(boolean) => Object::BOOLEAN(boolean.value),
             Expression::IfExp(if_expression) => todo!(),
             Expression::FncLit(function_literal) => todo!(),
             Expression::CallExp(call_expression) => todo!(),
