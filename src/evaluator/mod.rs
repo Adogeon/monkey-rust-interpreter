@@ -40,6 +40,10 @@ impl Evaluable for Expression {
 fn eval_infix_expression(operator: String, left: Object, right: Object) -> Object {
     if matches!(left, Object::INTEGER(_)) && matches!(right, Object::INTEGER(_)) {
         eval_integer_infix_expression(operator, left, right)
+    } else if operator.as_str() == "==" {
+        native_bool_to_boolean_object(left == right)
+    } else if operator.as_str() == "!=" {
+        native_bool_to_boolean_object(left != right)
     } else {
         NULL
     }
