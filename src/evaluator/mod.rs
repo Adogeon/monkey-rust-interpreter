@@ -24,12 +24,48 @@ impl Evaluable for Expression {
                 let right = eval(prefix_expression.right);
                 eval_prefix_expression(prefix_expression.operator, right)
             }
-            Expression::InExp(infix_expression) => todo!(),
+            Expression::InExp(infix_expression) => {
+                let right = eval(infix_expression.right);
+                let left = eval(infix_expression.left);
+                eval_infix_expression(infix_expression.operator, left, right)
+            }
             Expression::BoolLit(boolean) => native_bool_to_boolean_object(boolean.value),
             Expression::IfExp(if_expression) => todo!(),
             Expression::FncLit(function_literal) => todo!(),
             Expression::CallExp(call_expression) => todo!(),
         }
+    }
+}
+
+fn eval_infix_expression(operator: String, left: Object, right: Object) -> Object {
+    if matches!(left, Object::INTEGER(_)) && matches!(right, Object::INTEGER(_)) {
+        eval_integer_infix_expression(operator, left, right)
+    } else {
+        NULL
+    }
+}
+
+fn eval_integer_infix_expression(operator: String, left: Object, right: Object) -> Object {
+    let left_value = match left {
+        Object::INTEGER(s) => s,
+        _ => 0,
+    };
+
+    let right_value = match right {
+        Object::INTEGER(s) => s,
+        _ => 0,
+    };
+
+    match operator.as_str() {
+        "+" => Object::INTEGER(left_value + right_value),
+        "-" => Object::INTEGER(left_value - right_value),
+        "*" => Object::INTEGER(left_value * right_value),
+        "/" => Object::INTEGER(left_value / right_value),
+        "<" => native_bool_to_boolean_object(left_value < right_value),
+        ">" => native_bool_to_boolean_object(left_value > right_value),
+        "==" => native_bool_to_boolean_object(left_value == right_value),
+        "!=" => native_bool_to_boolean_object(left_value != right_value),
+        _ => NULL,
     }
 }
 
