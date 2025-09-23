@@ -79,3 +79,14 @@ fn test_bang_operator() -> Result<(), String> {
     }
     Ok(())
 }
+
+#[test]
+fn test_minut_operator() -> Result<(), String> {
+    let test_cases: Vec<(&str, i64)> = vec![("5", 5), ("-5", -5), ("11", 11), ("-11", -11)];
+
+    for (input, expected) in test_cases {
+        let evaluated = test_eval(input)?;
+        assert!(test_integer_object(evaluated, expected).is_ok());
+    }
+    Ok(())
+}

@@ -1,6 +1,10 @@
 use crate::ast::{Expression, Program, Statement};
 use crate::object::Object;
 
+const TRUE: Object = Object::BOOLEAN(true);
+const FALSE: Object = Object::BOOLEAN(false);
+const NULL: Object = Object::NULL;
+
 pub trait Evaluable {
     fn eval(self: Box<Self>) -> Object;
 }
@@ -21,7 +25,7 @@ impl Evaluable for Expression {
                 eval_prefix_expression(prefix_expression.operator, right)
             }
             Expression::InExp(infix_expression) => todo!(),
-            Expression::BoolLit(boolean) => Object::BOOLEAN(boolean.value),
+            Expression::BoolLit(boolean) => native_bool_to_boolean_object(boolean.value),
             Expression::IfExp(if_expression) => todo!(),
             Expression::FncLit(function_literal) => todo!(),
             Expression::CallExp(call_expression) => todo!(),
@@ -29,18 +33,36 @@ impl Evaluable for Expression {
     }
 }
 
+fn native_bool_to_boolean_object(value: bool) -> Object {
+    if value {
+        TRUE
+    } else {
+        FALSE
+    }
+}
+
 fn eval_prefix_expression(operator: String, right: Object) -> Object {
     match operator.as_str() {
         "!" => eval_bang_operator_expression(right),
+        "-" => eval_minus_prefix_operator_expression(right),
         _ => Object::NULL,
+    }
+}
+
+fn eval_minus_prefix_operator_expression(right: Object) -> Object {
+    if let Object::INTEGER(s) = right {
+        Object::INTEGER(-s)
+    } else {
+        NULL
     }
 }
 
 fn eval_bang_operator_expression(right: Object) -> Object {
     match right {
-        Object::NULL => Object::BOOLEAN(true),
-        Object::BOOLEAN(s) => Object::BOOLEAN(!s),
-        _ => Object::BOOLEAN(false),
+        TRUE => FALSE,
+        FALSE => TRUE,
+        NULL => TRUE,
+        _ => FALSE,
     }
 }
 
