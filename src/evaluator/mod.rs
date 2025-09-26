@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Program, Statement};
+use crate::ast::{BlockStatement, Expression, IfExpression, Program, Statement};
 use crate::object::Object;
 
 const TRUE: Object = Object::BOOLEAN(true);
@@ -10,6 +10,12 @@ pub trait Evaluable {
 }
 
 impl Evaluable for Program {
+    fn eval(self: Box<Self>) -> Object {
+        eval_statements(self.statements)
+    }
+}
+
+impl Evaluable for BlockStatement {
     fn eval(self: Box<Self>) -> Object {
         eval_statements(self.statements)
     }
@@ -30,10 +36,28 @@ impl Evaluable for Expression {
                 eval_infix_expression(infix_expression.operator, left, right)
             }
             Expression::BoolLit(boolean) => native_bool_to_boolean_object(boolean.value),
-            Expression::IfExp(if_expression) => todo!(),
+            Expression::IfExp(if_expression) => eval_if_expression(if_expression),
             Expression::FncLit(function_literal) => todo!(),
             Expression::CallExp(call_expression) => todo!(),
         }
+    }
+}
+
+fn eval_if_expression(if_expression: IfExpression) -> Object {
+    let condition = eval(if_expression.condition);
+    if is_truthy(condition) {
+        Box::new(if_expression.consequence).eval()
+    } else if let Some(alter) = if_expression.alternative {
+        Box::new(alter).eval()
+    } else {
+        NULL
+    }
+}
+
+fn is_truthy(condition: Object) -> bool {
+    match condition {
+        NULL | FALSE => false,
+        _ => true,
     }
 }
 
@@ -112,7 +136,7 @@ impl Evaluable for Statement {
             Statement::ExpStmt(exp_stmt) => Box::new(exp_stmt.expression).eval(),
             Statement::LetStmt(let_statement) => todo!(),
             Statement::RetStmt(return_statement) => todo!(),
-            Statement::BlcStmt(block_statement) => todo!(),
+            Statement::BlcStmt(block_statement) => Box::new(block_statement).eval(),
         }
     }
 }

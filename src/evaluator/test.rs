@@ -24,7 +24,7 @@ fn test_eval_integer_expression() -> Result<(), String> {
 
     for (input, expected) in test_cases {
         let evaluated = test_eval(input)?;
-        test_integer_object(evaluated, expected)?;
+        test_integer_object(&evaluated, expected)?;
     }
     Ok(())
 }
@@ -39,9 +39,9 @@ fn test_eval(input: &str) -> Result<Object, String> {
     Ok(eval(Box::new(program)))
 }
 
-fn test_integer_object(obj: Object, expected: i64) -> Result<(), String> {
+fn test_integer_object(obj: &Object, expected: i64) -> Result<(), String> {
     if let Object::INTEGER(val) = obj {
-        if val == expected {
+        if *val == expected {
             Ok(())
         } else {
             Err(format!(
@@ -79,15 +79,15 @@ fn test_eval_boolean_expression() -> Result<(), String> {
 
     for (input, expected) in test_cases {
         let evaluated = test_eval(input)?;
-        test_boolean_object(evaluated, expected)?;
+        test_boolean_object(&evaluated, expected)?;
     }
 
     Ok(())
 }
 
-fn test_boolean_object(input: Object, expected: bool) -> Result<(), String> {
+fn test_boolean_object(input: &Object, expected: bool) -> Result<(), String> {
     if let Object::BOOLEAN(s) = input {
-        if s == expected {
+        if *s == expected {
             Ok(())
         } else {
             Err(format!("expected {expected}, got={s}"))
@@ -110,7 +110,7 @@ fn test_bang_operator() -> Result<(), String> {
 
     for (input, expected) in test_cases {
         let evaluated = test_eval(input)?;
-        test_boolean_object(evaluated, expected)?;
+        test_boolean_object(&evaluated, expected)?;
     }
     Ok(())
 }
@@ -121,7 +121,37 @@ fn test_minus_operator() -> Result<(), String> {
 
     for (input, expected) in test_cases {
         let evaluated = test_eval(input)?;
-        test_integer_object(evaluated, expected)?;
+        test_integer_object(&evaluated, expected)?;
     }
     Ok(())
+}
+
+#[test]
+fn test_if_else_expressions() -> Result<(), String> {
+    let test_cases = vec![
+        ("if(true) {10}", "10"),
+        ("if(false) {10}", "null"),
+        ("if(1) {10}", "10"),
+        ("if(1 < 2) {10}", "10"),
+        ("if(1 > 2) {10}", "null"),
+        ("if(1 > 2) {10} else {20}", "20"),
+        ("if(1 < 2) {10} else {20}", "10"),
+    ];
+
+    for (input, expected) in test_cases {
+        let evaluated = test_eval(input)?;
+        expected.parse::<i64>().map_or_else(
+            |_e| test_null_object(&evaluated),
+            |v| test_integer_object(&evaluated, v),
+        )?;
+    }
+
+    Ok(())
+}
+
+fn test_null_object(evaluated: &Object) -> Result<(), String> {
+    match evaluated {
+        Object::NULL => Ok(()),
+        _ => Err(String::from("evalutated is not a Null Object")),
+    }
 }
