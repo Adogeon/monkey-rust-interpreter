@@ -96,7 +96,7 @@ impl<'a> Parser<'a> {
 
         while self.cur_token.tok_type != TType::EOF {
             self.parse_statement()
-                .map(|stmt| program.statements.push(stmt))
+                .map(|stmt| program.statements.push(Box::new(stmt)))
                 .unwrap_or_else(|err| self.append_errors(err));
 
             self.next_tok()
@@ -143,11 +143,11 @@ impl<'a> Parser<'a> {
 
         let let_stmt = ast::LetStatement {
             stmt_token,
-            name: stmt_name,
-            value,
+            name: Box::new(stmt_name),
+            value: Box::new(value),
         };
 
-        Ok(Statement::LetStmt(let_stmt))
+        Ok(Statement::LetStmt(Box::new(let_stmt)))
     }
 
     fn parse_return_stmt(&mut self) -> Result<Statement, ParseError> {
@@ -161,10 +161,10 @@ impl<'a> Parser<'a> {
 
         let ret_stmt = ast::ReturnStatement {
             stmt_token: token,
-            return_value: stmt_value,
+            return_value: Box::new(stmt_value),
         };
 
-        Ok(Statement::RetStmt(ret_stmt))
+        Ok(Statement::RetStmt(Box::new(ret_stmt)))
     }
 
     fn parse_expression_stmt(&mut self) -> Result<Statement, ParseError> {
@@ -174,10 +174,10 @@ impl<'a> Parser<'a> {
             self.next_tok();
         }
 
-        Ok(Statement::ExpStmt(ast::ExpressionStatement {
+        Ok(Statement::ExpStmt(Box::new(ast::ExpressionStatement {
             stmt_token: exp_tok,
-            expression: express,
-        }))
+            expression: Box::new(express),
+        })))
     }
 
     fn append_errors(&mut self, error: ParseError) {
@@ -262,7 +262,7 @@ impl<'a> Parser<'a> {
         let value = self.cur_token.tok_literal.clone();
         let token = self.cur_token.clone();
         let ident_exp = ast::Identifier { token, value };
-        Ok(Expression::Identifier(ident_exp))
+        Ok(Expression::Identifier(Box::new(ident_exp)))
     }
 
     fn parse_boolean(&self) -> Result<Expression, ParseError> {
@@ -270,7 +270,7 @@ impl<'a> Parser<'a> {
             token: self.cur_token.clone(),
             value: self.cur_tok_is(TType::TRUE),
         };
-        Ok(Expression::BoolLit(bool_lit))
+        Ok(Expression::BoolLit(Box::new(bool_lit)))
     }
 
     fn parse_integer_literal(&self) -> Result<Expression, ParseError> {
@@ -280,10 +280,10 @@ impl<'a> Parser<'a> {
             .parse()
             .map_err(|_| ParseError::IntLitParseError(int_token.tok_literal.clone()))?;
 
-        Ok(Expression::IntLit(ast::IntegerLiteral {
+        Ok(Expression::IntLit(Box::new(ast::IntegerLiteral {
             token: int_token,
             value,
-        }))
+        })))
     }
 
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
@@ -293,11 +293,11 @@ impl<'a> Parser<'a> {
         self.next_tok();
         let right = self.parse_expression(Precedent::PREFIX)?;
 
-        Ok(Expression::PreExp(ast::PrefixExpression {
+        Ok(Expression::PreExp(Box::new(ast::PrefixExpression {
             token,
             operator: literal,
             right: Box::new(right),
-        }))
+        })))
     }
 
     fn parse_infix_expression(&mut self, left: Box<Expression>) -> Result<Expression, ParseError> {
@@ -308,12 +308,12 @@ impl<'a> Parser<'a> {
         self.next_tok();
         let right = self.parse_expression(precedence)?;
 
-        Ok(Expression::InExp(ast::InfixExpression {
+        Ok(Expression::InExp(Box::new(ast::InfixExpression {
             token,
             operator: literal,
             left: left,
             right: Box::new(right),
-        }))
+        })))
     }
 
     fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
@@ -361,29 +361,29 @@ impl<'a> Parser<'a> {
             );
         }
 
-        Ok(Expression::IfExp(ast::IfExpression {
+        Ok(Expression::IfExp(Box::new(ast::IfExpression {
             token: tok,
             condition: Box::new(condition),
             consequence,
             alternative,
-        }))
+        })))
     }
 
-    fn parse_block_statement(&mut self) -> Result<ast::BlockStatement, ParseError> {
+    fn parse_block_statement(&mut self) -> Result<Box<ast::BlockStatement>, ParseError> {
         let tok = self.cur_token.clone();
-        let mut statements: Vec<Statement> = vec![];
+        let mut statements: Vec<Box<Statement>> = vec![];
 
         self.next_tok();
         while !self.cur_tok_is(TType::RBRACE) && !self.cur_tok_is(TType::EOF) {
             let stmt = self.parse_statement()?;
-            statements.push(stmt);
+            statements.push(Box::new(stmt));
             self.next_tok()
         }
 
-        Ok(ast::BlockStatement {
+        Ok(Box::new(ast::BlockStatement {
             token: tok,
             statements,
-        })
+        }))
     }
 
     fn parse_function_literal(&mut self) -> Result<Expression, ParseError> {
@@ -405,15 +405,15 @@ impl<'a> Parser<'a> {
             .parse_block_statement()
             .map_err(|_e| ParseError::ParsingError)?;
 
-        Ok(Expression::FncLit(ast::FunctionLiteral {
+        Ok(Expression::FncLit(Box::new(ast::FunctionLiteral {
             token,
             parameters,
             body,
-        }))
+        })))
     }
 
-    fn parse_function_parameters(&mut self) -> Result<Vec<Expression>, ParseError> {
-        let mut identifiers: Vec<Expression> = vec![];
+    fn parse_function_parameters(&mut self) -> Result<Vec<Box<Expression>>, ParseError> {
+        let mut identifiers: Vec<Box<Expression>> = vec![];
 
         if self.peek_tok_is(TType::RPAREN).is_some() {
             self.next_tok();
@@ -421,20 +421,20 @@ impl<'a> Parser<'a> {
         }
 
         self.next_tok();
-        let mut ident = Expression::Identifier(ast::Identifier {
+        let mut ident = ast::Identifier {
             token: self.cur_token.clone(),
             value: self.cur_token.clone().tok_literal,
-        });
-        identifiers.push(ident);
+        };
+        identifiers.push(Box::new(Expression::Identifier(Box::new(ident))));
 
         while self.peek_tok_is(TType::COMMA).is_some() {
             self.next_tok();
             self.next_tok();
-            ident = Expression::Identifier(ast::Identifier {
+            ident = ast::Identifier {
                 token: self.cur_token.clone(),
                 value: self.cur_token.clone().tok_literal,
-            });
-            identifiers.push(ident);
+            };
+            identifiers.push(Box::new(Expression::Identifier(Box::new(ident))));
         }
 
         if self.expect_peek(TType::RPAREN).is_none() {
@@ -451,15 +451,15 @@ impl<'a> Parser<'a> {
         let token = self.cur_token.clone();
         let arguments = self.parse_call_arguments()?;
 
-        Ok(Expression::CallExp(ast::CallExpression {
+        Ok(Expression::CallExp(Box::new(ast::CallExpression {
             token,
             function,
             arguments,
-        }))
+        })))
     }
 
-    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
-        let mut args: Vec<Expression> = vec![];
+    fn parse_call_arguments(&mut self) -> Result<Vec<Box<Expression>>, ParseError> {
+        let mut args: Vec<Box<Expression>> = vec![];
 
         if self.peek_tok_is(TType::RPAREN).is_some() {
             self.next_tok();
@@ -469,12 +469,12 @@ impl<'a> Parser<'a> {
         self.next_tok();
 
         self.parse_expression(Precedent::LOWEST)
-            .map(|exp| args.push(exp))?;
+            .map(|exp| args.push(Box::new(exp)))?;
         while self.peek_tok_is(TType::COMMA).is_some() {
             self.next_tok();
             self.next_tok();
             self.parse_expression(Precedent::LOWEST)
-                .map(|exp| args.push(exp))?;
+                .map(|exp| args.push(Box::new(exp)))?;
         }
 
         if self.expect_peek(TType::RPAREN).is_none() {

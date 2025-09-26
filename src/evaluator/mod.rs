@@ -43,12 +43,12 @@ impl Evaluable for Expression {
     }
 }
 
-fn eval_if_expression(if_expression: IfExpression) -> Object {
+fn eval_if_expression(if_expression: Box<IfExpression>) -> Object {
     let condition = eval(if_expression.condition);
     if is_truthy(condition) {
-        Box::new(if_expression.consequence).eval()
+        if_expression.consequence.eval()
     } else if let Some(alter) = if_expression.alternative {
-        Box::new(alter).eval()
+        alter.eval()
     } else {
         NULL
     }
@@ -133,10 +133,10 @@ fn eval_bang_operator_expression(right: Object) -> Object {
 impl Evaluable for Statement {
     fn eval(self: Box<Self>) -> Object {
         match *self {
-            Statement::ExpStmt(exp_stmt) => Box::new(exp_stmt.expression).eval(),
+            Statement::ExpStmt(exp_stmt) => exp_stmt.expression.eval(),
             Statement::LetStmt(let_statement) => todo!(),
-            Statement::RetStmt(return_statement) => Box::new(return_statement.return_value).eval(),
-            Statement::BlcStmt(block_statement) => Box::new(block_statement).eval(),
+            Statement::RetStmt(return_statement) => return_statement.return_value.eval(),
+            Statement::BlcStmt(block_statement) => block_statement.eval(),
         }
     }
 }
@@ -145,11 +145,11 @@ pub fn eval(node: Box<dyn Evaluable>) -> Object {
     node.eval()
 }
 
-fn eval_statements(statements: Vec<Statement>) -> Object {
+fn eval_statements(statements: Vec<Box<Statement>>) -> Object {
     let mut result: Object = Object::NULL;
     for stmt in statements {
-        let is_return = matches!(stmt, Statement::RetStmt(_));
-        let value = Box::new(stmt).eval();
+        let is_return = matches!(*stmt, Statement::RetStmt(_));
+        let value = stmt.eval();
         if is_return {
             return value;
         }

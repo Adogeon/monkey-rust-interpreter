@@ -20,7 +20,7 @@ impl Display for EmptyValue {
 }
 
 pub struct Program {
-    pub statements: Vec<Statement>,
+    pub statements: Vec<Box<Statement>>,
 }
 
 impl Node for Program {
@@ -44,8 +44,8 @@ impl Display for Program {
 
 pub struct LetStatement {
     pub stmt_token: Token,
-    pub name: Identifier,
-    pub value: Expression,
+    pub name: Box<Identifier>,
+    pub value: Box<Expression>,
 }
 
 impl Node for LetStatement {
@@ -65,7 +65,7 @@ impl Display for LetStatement {
 
 pub struct ReturnStatement {
     pub stmt_token: Token,
-    pub return_value: Expression,
+    pub return_value: Box<Expression>,
 }
 
 impl Node for ReturnStatement {
@@ -84,7 +84,7 @@ impl Display for ReturnStatement {
 
 pub struct ExpressionStatement {
     pub stmt_token: Token,
-    pub expression: Expression,
+    pub expression: Box<Expression>,
 }
 
 impl Node for ExpressionStatement {
@@ -101,7 +101,7 @@ impl Display for ExpressionStatement {
 
 pub struct BlockStatement {
     pub token: Token,
-    pub statements: Vec<Statement>,
+    pub statements: Vec<Box<Statement>>,
 }
 
 impl Node for BlockStatement {
@@ -121,10 +121,10 @@ impl Display for BlockStatement {
 }
 
 pub enum Statement {
-    LetStmt(LetStatement),
-    RetStmt(ReturnStatement),
-    ExpStmt(ExpressionStatement),
-    BlcStmt(BlockStatement),
+    LetStmt(Box<LetStatement>),
+    RetStmt(Box<ReturnStatement>),
+    ExpStmt(Box<ExpressionStatement>),
+    BlcStmt(Box<BlockStatement>),
 }
 
 impl Node for Statement {
@@ -240,8 +240,8 @@ impl Display for Boolean {
 pub struct IfExpression {
     pub token: Token,
     pub condition: Box<Expression>,
-    pub consequence: BlockStatement,
-    pub alternative: Option<BlockStatement>,
+    pub consequence: Box<BlockStatement>,
+    pub alternative: Option<Box<BlockStatement>>,
 }
 
 impl Node for IfExpression {
@@ -263,8 +263,8 @@ impl Display for IfExpression {
 
 pub struct FunctionLiteral {
     pub token: Token,
-    pub parameters: Vec<Expression>,
-    pub body: BlockStatement,
+    pub parameters: Vec<Box<Expression>>,
+    pub body: Box<BlockStatement>,
 }
 
 impl Node for FunctionLiteral {
@@ -291,7 +291,7 @@ impl Display for FunctionLiteral {
 pub struct CallExpression {
     pub token: Token,
     pub function: Box<Expression>,
-    pub arguments: Vec<Expression>,
+    pub arguments: Vec<Box<Expression>>,
 }
 
 impl Node for CallExpression {
@@ -313,14 +313,14 @@ impl Display for CallExpression {
 }
 
 pub enum Expression {
-    Identifier(Identifier),
-    IntLit(IntegerLiteral),
-    PreExp(PrefixExpression),
-    InExp(InfixExpression),
-    BoolLit(Boolean),
-    IfExp(IfExpression),
-    FncLit(FunctionLiteral),
-    CallExp(CallExpression),
+    Identifier(Box<Identifier>),
+    IntLit(Box<IntegerLiteral>),
+    PreExp(Box<PrefixExpression>),
+    InExp(Box<InfixExpression>),
+    BoolLit(Box<Boolean>),
+    IfExp(Box<IfExpression>),
+    FncLit(Box<FunctionLiteral>),
+    CallExp(Box<CallExpression>),
 }
 
 impl Node for Expression {
