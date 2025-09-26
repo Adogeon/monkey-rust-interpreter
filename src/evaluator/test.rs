@@ -155,3 +155,18 @@ fn test_null_object(evaluated: &Object) -> Result<(), String> {
         _ => Err(String::from("evalutated is not a Null Object")),
     }
 }
+
+#[test]
+fn test_return_statement() -> Result<(), String> {
+    let test_cases = vec![
+        ("return 10;", 10),
+        ("return 10; 9;", 10),
+        ("return 2 * 5; 9;", 10),
+        ("9; return 2*5; 9;", 10),
+    ];
+    for (input, expected) in test_cases {
+        let evaluated = test_eval(input)?;
+        test_integer_object(&evaluated, expected)?;
+    }
+    Ok(())
+}

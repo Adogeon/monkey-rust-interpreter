@@ -135,7 +135,7 @@ impl Evaluable for Statement {
         match *self {
             Statement::ExpStmt(exp_stmt) => Box::new(exp_stmt.expression).eval(),
             Statement::LetStmt(let_statement) => todo!(),
-            Statement::RetStmt(return_statement) => todo!(),
+            Statement::RetStmt(return_statement) => Box::new(return_statement.return_value).eval(),
             Statement::BlcStmt(block_statement) => Box::new(block_statement).eval(),
         }
     }
@@ -148,7 +148,12 @@ pub fn eval(node: Box<dyn Evaluable>) -> Object {
 fn eval_statements(statements: Vec<Statement>) -> Object {
     let mut result: Object = Object::NULL;
     for stmt in statements {
-        result = Box::new(stmt).eval();
+        let is_return = matches!(stmt, Statement::RetStmt(_));
+        let value = Box::new(stmt).eval();
+        if is_return {
+            return value;
+        }
+        result = value;
     }
     return result;
 }
