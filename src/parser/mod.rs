@@ -369,7 +369,7 @@ impl<'a> Parser<'a> {
         })))
     }
 
-    fn parse_block_statement(&mut self) -> Result<Box<ast::BlockStatement>, ParseError> {
+    fn parse_block_statement(&mut self) -> Result<Box<Statement>, ParseError> {
         let tok = self.cur_token.clone();
         let mut statements: Vec<Box<Statement>> = vec![];
 
@@ -380,10 +380,12 @@ impl<'a> Parser<'a> {
             self.next_tok()
         }
 
-        Ok(Box::new(ast::BlockStatement {
-            token: tok,
-            statements,
-        }))
+        Ok(Box::new(Statement::BlcStmt(Box::new(
+            ast::BlockStatement {
+                token: tok,
+                statements,
+            },
+        ))))
     }
 
     fn parse_function_literal(&mut self) -> Result<Expression, ParseError> {

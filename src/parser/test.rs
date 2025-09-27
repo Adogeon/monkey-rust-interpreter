@@ -529,20 +529,23 @@ fn test_if_expression() -> Result<(), String> {
 
     assert!(test_infix_expression(&if_exp.condition, "x".into(), "<".into(), "y".into()).is_ok());
 
-    assert_eq!(
-        1,
-        if_exp.consequence.statements.len(),
-        "consequences is not 1 statements. got={}",
-        if_exp.consequence.statements.len()
-    );
+    if let Statement::BlcStmt(bs) = if_exp.consequence.as_ref() {
+        assert_eq!(
+            1,
+            bs.statements.len(),
+            "consequences is not 1 statements. got={}",
+            bs.statements.len()
+        );
 
-    let consequences_stmt =
-        if let Statement::ExpStmt(stmt) = &if_exp.consequence.statements[0].as_ref() {
+        let consequences_stmt = if let Statement::ExpStmt(stmt) = &bs.statements[0].as_ref() {
             stmt
         } else {
             panic!("Consequence statements[0] is not an Expression Statement");
         };
-    assert!(test_identifier(&consequences_stmt.expression, "x".into()).is_ok());
+        assert!(test_identifier(&consequences_stmt.expression, "x".into()).is_ok());
+    } else {
+        panic!("if_exp.consequence is not a Block Statement")
+    }
 
     assert!(&if_exp.alternative.is_none());
 
@@ -572,7 +575,7 @@ fn test_if_else_expression() -> Result<(), String> {
         panic!("program.statement[0] is not an Expression Statement");
     };
 
-    let if_exp = if let Expression::IfExp(exp) = &if_stmt.expression.as_ref() {
+    let if_exp = if let Expression::IfExp(exp) = if_stmt.expression.as_ref() {
         exp
     } else {
         panic!("if_stmt.expression is not an If Expression");
@@ -580,20 +583,23 @@ fn test_if_else_expression() -> Result<(), String> {
 
     assert!(test_infix_expression(&if_exp.condition, "x".into(), "<".into(), "y".into()).is_ok());
 
-    assert_eq!(
-        1,
-        if_exp.consequence.statements.len(),
-        "consequences is not 1 statements. got={}",
-        if_exp.consequence.statements.len()
-    );
+    if let Statement::BlcStmt(bs) = if_exp.consequence.as_ref() {
+        assert_eq!(
+            1,
+            bs.statements.len(),
+            "consequences is not 1 statements. got={}",
+            bs.statements.len()
+        );
 
-    let consequences_stmt =
-        if let Statement::ExpStmt(stmt) = &if_exp.consequence.statements[0].as_ref() {
+        let consequences_stmt = if let Statement::ExpStmt(stmt) = bs.statements[0].as_ref() {
             stmt
         } else {
             panic!("Consequence statements[0] is not an Expression Statement");
         };
-    assert!(test_identifier(&consequences_stmt.expression, "x".into()).is_ok());
+        assert!(test_identifier(&consequences_stmt.expression, "x".into()).is_ok());
+    } else {
+        panic!("the if_exp consequence is not a block statement")
+    }
 
     let alternatives = if let Some(result) = &if_exp.alternative {
         result
@@ -601,20 +607,21 @@ fn test_if_else_expression() -> Result<(), String> {
         panic!("No alternative block in if else expression")
     };
 
-    assert_eq!(
-        1,
-        alternatives.statements.len(),
-        "alternatives is not 1 statements. got={}",
-        alternatives.statements.len()
-    );
+    if let Statement::BlcStmt(bs) = alternatives.as_ref() {
+        assert_eq!(
+            1,
+            bs.statements.len(),
+            "alternatives is not 1 statements. got={}",
+            bs.statements.len()
+        );
 
-    let alternative_stmt = if let Statement::ExpStmt(stmt) = &alternatives.statements[0].as_ref() {
-        stmt
-    } else {
-        panic!("alternative statements[0] is not an Expression Statement");
-    };
-    assert!(test_identifier(&alternative_stmt.expression, "y".into()).is_ok());
-
+        let alternative_stmt = if let Statement::ExpStmt(stmt) = bs.statements[0].as_ref() {
+            stmt
+        } else {
+            panic!("alternative statements[0] is not an Expression Statement");
+        };
+        assert!(test_identifier(&alternative_stmt.expression, "y".into()).is_ok());
+    }
     Ok(())
 }
 
@@ -657,22 +664,28 @@ fn test_function_literal_parsing() -> Result<(), String> {
     assert!(test_identifier(&*fnc_lit.parameters[0], "x".into()).is_ok());
     assert!(test_identifier(&fnc_lit.parameters[1], "y".into()).is_ok());
 
-    assert_eq!(
-        1,
-        fnc_lit.body.statements.len(),
-        "fnc_lit.body.statements has not 1 statements. got={}",
-        fnc_lit.body.statements.len()
-    );
-
-    if let Statement::ExpStmt(body_stmt) = &fnc_lit.body.statements[0].as_ref() {
-        assert!(
-            test_infix_expression(&body_stmt.expression, "x".into(), "+".into(), "y".into())
-                .is_ok()
+    if let Statement::BlcStmt(bs) = fnc_lit.body.as_ref() {
+        assert_eq!(
+            1,
+            bs.statements.len(),
+            "fnc_lit.body.statements has not 1 statements. got={}",
+            bs.statements.len()
         );
-    } else {
-        panic!("fnc_lit.body.statements[0] is not an Expression Statement")
-    }
 
+        if let Statement::ExpStmt(body_stmt) = bs.statements[0].as_ref() {
+            assert!(test_infix_expression(
+                &body_stmt.expression,
+                "x".into(),
+                "+".into(),
+                "y".into()
+            )
+            .is_ok());
+        } else {
+            panic!("fnc_lit.body.statements[0] is not an Expression Statement")
+        }
+    } else {
+        panic!("fnc_lit.body.statements[0] is not a Block statement")
+    }
     Ok(())
 }
 

@@ -240,8 +240,8 @@ impl Display for Boolean {
 pub struct IfExpression {
     pub token: Token,
     pub condition: Box<Expression>,
-    pub consequence: Box<BlockStatement>,
-    pub alternative: Option<Box<BlockStatement>>,
+    pub consequence: Box<Statement>,
+    pub alternative: Option<Box<Statement>>,
 }
 
 impl Node for IfExpression {
@@ -264,7 +264,7 @@ impl Display for IfExpression {
 pub struct FunctionLiteral {
     pub token: Token,
     pub parameters: Vec<Box<Expression>>,
-    pub body: Box<BlockStatement>,
+    pub body: Box<Statement>,
 }
 
 impl Node for FunctionLiteral {

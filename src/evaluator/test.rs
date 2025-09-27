@@ -163,6 +163,7 @@ fn test_return_statement() -> Result<(), String> {
         ("return 10; 9;", 10),
         ("return 2 * 5; 9;", 10),
         ("9; return 2*5; 9;", 10),
+        ("if(10 > 1) { if  (10>1) {return 10;} return 1;}", 10),
     ];
     for (input, expected) in test_cases {
         let evaluated = test_eval(input)?;

@@ -1,4 +1,4 @@
-use crate::ast::{BlockStatement, Expression, IfExpression, Program, Statement};
+use crate::ast::{Expression, Program, Statement};
 use crate::object::Object;
 
 const TRUE: Object = Object::BOOLEAN(true);
@@ -11,13 +11,14 @@ pub trait Evaluable {
 
 impl Evaluable for Program {
     fn eval(self: Box<Self>) -> Object {
-        eval_statements(self.statements)
-    }
-}
-
-impl Evaluable for BlockStatement {
-    fn eval(self: Box<Self>) -> Object {
-        eval_statements(self.statements)
+        let mut result = Object::NULL;
+        for stmt in self.statements {
+            result = eval(stmt);
+            if let Object::RETURN(rv) = result {
+                return *rv;
+            }
+        }
+        return result;
     }
 }
 
@@ -36,21 +37,19 @@ impl Evaluable for Expression {
                 eval_infix_expression(infix_expression.operator, left, right)
             }
             Expression::BoolLit(boolean) => native_bool_to_boolean_object(boolean.value),
-            Expression::IfExp(if_expression) => eval_if_expression(if_expression),
+            Expression::IfExp(if_expression) => {
+                let condition = eval(if_expression.condition);
+                if is_truthy(condition) {
+                    if_expression.consequence.eval()
+                } else if let Some(alter) = if_expression.alternative {
+                    alter.eval()
+                } else {
+                    NULL
+                }
+            }
             Expression::FncLit(function_literal) => todo!(),
             Expression::CallExp(call_expression) => todo!(),
         }
-    }
-}
-
-fn eval_if_expression(if_expression: Box<IfExpression>) -> Object {
-    let condition = eval(if_expression.condition);
-    if is_truthy(condition) {
-        if_expression.consequence.eval()
-    } else if let Some(alter) = if_expression.alternative {
-        alter.eval()
-    } else {
-        NULL
     }
 }
 
@@ -135,27 +134,26 @@ impl Evaluable for Statement {
         match *self {
             Statement::ExpStmt(exp_stmt) => exp_stmt.expression.eval(),
             Statement::LetStmt(let_statement) => todo!(),
-            Statement::RetStmt(return_statement) => return_statement.return_value.eval(),
-            Statement::BlcStmt(block_statement) => block_statement.eval(),
+            Statement::RetStmt(return_statement) => {
+                let value = return_statement.return_value.eval();
+                Object::RETURN(Box::new(value))
+            }
+            Statement::BlcStmt(block_statement) => {
+                let mut result: Object = Object::NULL;
+                for stmt in block_statement.statements {
+                    result = eval(stmt);
+                    if matches!(result, Object::RETURN(_)) && !matches!(result, Object::NULL) {
+                        return result;
+                    }
+                }
+                return result;
+            }
         }
     }
 }
 
 pub fn eval(node: Box<dyn Evaluable>) -> Object {
     node.eval()
-}
-
-fn eval_statements(statements: Vec<Box<Statement>>) -> Object {
-    let mut result: Object = Object::NULL;
-    for stmt in statements {
-        let is_return = matches!(*stmt, Statement::RetStmt(_));
-        let value = stmt.eval();
-        if is_return {
-            return value;
-        }
-        result = value;
-    }
-    return result;
 }
 
 #[cfg(test)]
