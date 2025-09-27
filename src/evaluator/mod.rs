@@ -5,6 +5,14 @@ const TRUE: Object = Object::BOOLEAN(true);
 const FALSE: Object = Object::BOOLEAN(false);
 const NULL: Object = Object::NULL;
 
+fn new_error(msg: String) -> Object {
+    Object::ERROR(msg)
+}
+
+fn is_error(input: &Object) -> bool {
+    matches!(input, Object::ERROR(_))
+}
+
 pub trait Evaluable {
     fn eval(self: Box<Self>) -> Object;
 }
@@ -16,6 +24,8 @@ impl Evaluable for Program {
             result = eval(stmt);
             if let Object::RETURN(rv) = result {
                 return *rv;
+            } else if matches!(result, Object::ERROR(_)) {
+                return result;
             }
         }
         return result;
@@ -29,16 +39,29 @@ impl Evaluable for Expression {
             Expression::Identifier(identifier) => todo!(),
             Expression::PreExp(prefix_expression) => {
                 let right = eval(prefix_expression.right);
+                if is_error(&right) {
+                    return right;
+                }
                 eval_prefix_expression(prefix_expression.operator, right)
             }
             Expression::InExp(infix_expression) => {
                 let right = eval(infix_expression.right);
+                if is_error(&right) {
+                    return right;
+                }
                 let left = eval(infix_expression.left);
+                if is_error(&left) {
+                    return left;
+                }
                 eval_infix_expression(infix_expression.operator, left, right)
             }
             Expression::BoolLit(boolean) => native_bool_to_boolean_object(boolean.value),
             Expression::IfExp(if_expression) => {
                 let condition = eval(if_expression.condition);
+                if is_error(&condition) {
+                    return condition;
+                }
+
                 if is_truthy(condition) {
                     if_expression.consequence.eval()
                 } else if let Some(alter) = if_expression.alternative {
@@ -67,8 +90,20 @@ fn eval_infix_expression(operator: String, left: Object, right: Object) -> Objec
         native_bool_to_boolean_object(left == right)
     } else if operator.as_str() == "!=" {
         native_bool_to_boolean_object(left != right)
+    } else if left.ob_type() != right.ob_type() {
+        new_error(format!(
+            "type mismatch:{} {} {}",
+            left.ob_type(),
+            operator,
+            right.ob_type()
+        ))
     } else {
-        NULL
+        new_error(format!(
+            "unknown operator:{} {} {}",
+            left.ob_type(),
+            operator,
+            right.ob_type()
+        ))
     }
 }
 
@@ -92,7 +127,12 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
         ">" => native_bool_to_boolean_object(left_value > right_value),
         "==" => native_bool_to_boolean_object(left_value == right_value),
         "!=" => native_bool_to_boolean_object(left_value != right_value),
-        _ => NULL,
+        _ => new_error(format!(
+            "unknown operator:{} {} {}",
+            left.ob_type(),
+            operator,
+            right.ob_type(),
+        )),
     }
 }
 
@@ -108,7 +148,7 @@ fn eval_prefix_expression(operator: String, right: Object) -> Object {
     match operator.as_str() {
         "!" => eval_bang_operator_expression(right),
         "-" => eval_minus_prefix_operator_expression(right),
-        _ => Object::NULL,
+        _ => new_error(format!("unknown operator:{}{}", operator, right.ob_type())),
     }
 }
 
@@ -116,7 +156,7 @@ fn eval_minus_prefix_operator_expression(right: Object) -> Object {
     if let Object::INTEGER(s) = right {
         Object::INTEGER(-s)
     } else {
-        NULL
+        new_error(format!("unknown operator:-{}", right.ob_type()))
     }
 }
 
@@ -136,14 +176,20 @@ impl Evaluable for Statement {
             Statement::LetStmt(let_statement) => todo!(),
             Statement::RetStmt(return_statement) => {
                 let value = return_statement.return_value.eval();
+                if is_error(&value) {
+                    return value;
+                }
                 Object::RETURN(Box::new(value))
             }
             Statement::BlcStmt(block_statement) => {
                 let mut result: Object = Object::NULL;
                 for stmt in block_statement.statements {
                     result = eval(stmt);
-                    if matches!(result, Object::RETURN(_)) && !matches!(result, Object::NULL) {
-                        return result;
+                    if !matches!(result, Object::NULL) {
+                        if matches!(result, Object::RETURN(_)) || matches!(result, Object::ERROR(_))
+                        {
+                            return result;
+                        }
                     }
                 }
                 return result;
