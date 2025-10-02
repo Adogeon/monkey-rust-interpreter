@@ -1,6 +1,7 @@
 use std::fmt::Display;
+pub mod environment;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Object {
     INTEGER(i64),
     BOOLEAN(bool),

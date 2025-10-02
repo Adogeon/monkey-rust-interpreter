@@ -36,7 +36,8 @@ fn test_eval(input: &str) -> Result<Object, String> {
         .parse_program()
         .map_err(|err| format!("Parsing error: {err}"))?;
 
-    Ok(eval(Box::new(program)))
+    let mut env = new_environment();
+    Ok(eval(Box::new(program), env.as_mut()))
 }
 
 fn test_integer_object(obj: &Object, expected: i64) -> Result<(), String> {
@@ -199,5 +200,22 @@ fn test_error_handling() -> Result<(), String> {
             panic!("not an error object for input:{}, got={}", input, evaluated)
         }
     }
+    Ok(())
+}
+
+#[test]
+fn test_let_statements() -> Result<(), String> {
+    let test_cases = vec![
+        ("let a = 5;a", 5),
+        ("let a = 5 * 5;a", 25),
+        ("let a = 5; let b = a;b;", 5),
+        ("let a = 5;let b = a; let c = a + b + 5; c;", 15),
+    ];
+
+    for (input, expected) in test_cases {
+        let val = test_eval(input)?;
+        test_integer_object(&val, expected)?;
+    }
+
     Ok(())
 }

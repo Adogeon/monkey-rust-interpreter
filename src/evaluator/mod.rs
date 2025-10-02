@@ -1,4 +1,5 @@
 use crate::ast::{Expression, Program, Statement};
+use crate::object::environment::{new_environment, Environment};
 use crate::object::Object;
 
 const TRUE: Object = Object::BOOLEAN(true);
@@ -14,14 +15,14 @@ fn is_error(input: &Object) -> bool {
 }
 
 pub trait Evaluable {
-    fn eval(self: Box<Self>) -> Object;
+    fn eval(self: Box<Self>, env: &mut Environment) -> Object;
 }
 
 impl Evaluable for Program {
-    fn eval(self: Box<Self>) -> Object {
+    fn eval(self: Box<Self>, env: &mut Environment) -> Object {
         let mut result = Object::NULL;
         for stmt in self.statements {
-            result = eval(stmt);
+            result = eval(stmt, env);
             if let Object::RETURN(rv) = result {
                 return *rv;
             } else if matches!(result, Object::ERROR(_)) {
@@ -33,23 +34,26 @@ impl Evaluable for Program {
 }
 
 impl Evaluable for Expression {
-    fn eval(self: Box<Self>) -> Object {
+    fn eval(self: Box<Self>, env: &mut Environment) -> Object {
         match *self {
             Expression::IntLit(int_lit) => Object::INTEGER(int_lit.value),
-            Expression::Identifier(identifier) => todo!(),
+            Expression::Identifier(identifier) => match env.get(&identifier.value) {
+                Some(val) => val,
+                None => new_error(format!("identifier not found: {}", identifier.value)),
+            },
             Expression::PreExp(prefix_expression) => {
-                let right = eval(prefix_expression.right);
+                let right = eval(prefix_expression.right, env);
                 if is_error(&right) {
                     return right;
                 }
                 eval_prefix_expression(prefix_expression.operator, right)
             }
             Expression::InExp(infix_expression) => {
-                let right = eval(infix_expression.right);
+                let right = eval(infix_expression.right, env);
                 if is_error(&right) {
                     return right;
                 }
-                let left = eval(infix_expression.left);
+                let left = eval(infix_expression.left, env);
                 if is_error(&left) {
                     return left;
                 }
@@ -57,15 +61,15 @@ impl Evaluable for Expression {
             }
             Expression::BoolLit(boolean) => native_bool_to_boolean_object(boolean.value),
             Expression::IfExp(if_expression) => {
-                let condition = eval(if_expression.condition);
+                let condition = eval(if_expression.condition, env);
                 if is_error(&condition) {
                     return condition;
                 }
 
                 if is_truthy(condition) {
-                    if_expression.consequence.eval()
+                    if_expression.consequence.eval(env)
                 } else if let Some(alter) = if_expression.alternative {
-                    alter.eval()
+                    alter.eval(env)
                 } else {
                     NULL
                 }
@@ -170,12 +174,19 @@ fn eval_bang_operator_expression(right: Object) -> Object {
 }
 
 impl Evaluable for Statement {
-    fn eval(self: Box<Self>) -> Object {
+    fn eval(self: Box<Self>, env: &mut Environment) -> Object {
         match *self {
-            Statement::ExpStmt(exp_stmt) => exp_stmt.expression.eval(),
-            Statement::LetStmt(let_statement) => todo!(),
+            Statement::ExpStmt(exp_stmt) => exp_stmt.expression.eval(env),
+            Statement::LetStmt(let_statement) => {
+                let value = let_statement.value.eval(env);
+                if is_error(&value) {
+                    return value;
+                }
+                env.set(let_statement.name.value, &value);
+                value
+            }
             Statement::RetStmt(return_statement) => {
-                let value = return_statement.return_value.eval();
+                let value = return_statement.return_value.eval(env);
                 if is_error(&value) {
                     return value;
                 }
@@ -184,7 +195,7 @@ impl Evaluable for Statement {
             Statement::BlcStmt(block_statement) => {
                 let mut result: Object = Object::NULL;
                 for stmt in block_statement.statements {
-                    result = eval(stmt);
+                    result = eval(stmt, env);
                     if !matches!(result, Object::NULL) {
                         if matches!(result, Object::RETURN(_)) || matches!(result, Object::ERROR(_))
                         {
@@ -198,8 +209,8 @@ impl Evaluable for Statement {
     }
 }
 
-pub fn eval(node: Box<dyn Evaluable>) -> Object {
-    node.eval()
+pub fn eval(node: Box<dyn Evaluable>, env: &mut Environment) -> Object {
+    node.eval(env)
 }
 
 #[cfg(test)]
