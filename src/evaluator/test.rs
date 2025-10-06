@@ -219,3 +219,35 @@ fn test_let_statements() -> Result<(), String> {
 
     Ok(())
 }
+
+#[test]
+fn test_function_eval() -> Result<(), String> {
+    let input = "fn(x) {x + 2;};";
+    let val = test_eval(input)?;
+    if let Object::FUNCTION(func) = val {
+        assert_eq!(
+            1,
+            func.parameters.len(),
+            "function has wrong parameters, expected 1; got={}",
+            func.parameters.len()
+        );
+
+        assert_eq!(
+            "x",
+            func.parameters[0].to_string(),
+            "parameter is not 'x', got = {}",
+            func.parameters[0]
+        );
+
+        assert_eq!(
+            "(x+2)",
+            func.body.to_string(),
+            "body is not \"(x+2)\". got = {}",
+            func.body.to_string()
+        )
+    } else {
+        panic!("Result object is not a function");
+    }
+
+    Ok(())
+}

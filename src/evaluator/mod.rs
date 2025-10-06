@@ -1,6 +1,7 @@
-use crate::ast::{Expression, Program, Statement};
+use crate::ast::{Expression, Identifier, Program, Statement};
 use crate::object::environment::{new_environment, Environment};
-use crate::object::Object;
+use crate::object::{Function, Object};
+use std::rc::Rc;
 
 const TRUE: Object = Object::BOOLEAN(true);
 const FALSE: Object = Object::BOOLEAN(false);
@@ -74,7 +75,31 @@ impl Evaluable for Expression {
                     NULL
                 }
             }
-            Expression::FncLit(function_literal) => todo!(),
+            Expression::FncLit(function_literal) => {
+                let params = function_literal
+                    .parameters
+                    .into_iter()
+                    .map(|p| {
+                        if let Expression::Identifier(id) = *p {
+                            id
+                        } else {
+                            panic!("function parameters is not identifiers")
+                        }
+                    })
+                    .collect();
+
+                let body = if let Statement::BlcStmt(block) = *function_literal.body {
+                    block
+                } else {
+                    panic!("Abort, wrong type of statement in function body")
+                };
+
+                Object::FUNCTION(Rc::new(Function {
+                    parameters: params,
+                    body,
+                    env: new_environment(),
+                }))
+            }
             Expression::CallExp(call_expression) => todo!(),
         }
     }
