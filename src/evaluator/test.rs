@@ -240,14 +240,32 @@ fn test_function_eval() -> Result<(), String> {
         );
 
         assert_eq!(
-            "(x+2)",
+            "(x + 2)",
             func.body.to_string(),
-            "body is not \"(x+2)\". got = {}",
+            "body is not \"(x + 2)\". got = {}",
             func.body.to_string()
         )
     } else {
         panic!("Result object is not a function");
     }
 
+    Ok(())
+}
+
+#[test]
+fn test_functions_application() -> Result<(), String> {
+    let test_cases: Vec<(&str, i64)> = vec![
+        ("let identify = fn(x) {x;}; identify(5);", 5),
+        ("let identify = fn(x) {return x;}; identify(5);", 5),
+        ("let double = fn(x) {x * 2;}; double(5);", 10),
+        ("let add = fn(x, y) {x + y;}; add(5,5);", 10),
+        ("let add = fn(x,y) {x + y;}; add(5 + 5, add(5,5));", 20),
+        ("fn(x) {x;}(5)", 5),
+    ];
+
+    for (input, expected) in test_cases {
+        let val = test_eval(input)?;
+        test_integer_object(&val, expected)?;
+    }
     Ok(())
 }

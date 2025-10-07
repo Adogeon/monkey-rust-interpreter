@@ -1,6 +1,7 @@
 use crate::ast::{Expression, Identifier, Program, Statement};
-use crate::object::environment::{new_environment, Environment};
+use crate::object::environment::{new_enclosed_environment, Environment};
 use crate::object::{Function, Object};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 const TRUE: Object = Object::BOOLEAN(true);
@@ -94,15 +95,41 @@ impl Evaluable for Expression {
                     panic!("Abort, wrong type of statement in function body")
                 };
 
+                let outer = Rc::new(RefCell::new(*env));
+
                 Object::FUNCTION(Rc::new(Function {
                     parameters: params,
                     body,
-                    env: new_environment(),
+                    env: new_enclosed_environment(outer),
                 }))
             }
-            Expression::CallExp(call_expression) => todo!(),
+            Expression::CallExp(call_expression) => {
+                let function = call_expression.function.eval(env);
+                if is_error(&function) {
+                    function
+                }
+                let args = eval_expressions(call_expression.arguments, env);
+                if args.len() == 1 && is_error(&args[0]) {
+                    args[0]
+                }
+            }
         }
     }
+}
+
+fn eval_expressions(arguments: Vec<Box<Expression>>, env: &mut Environment) -> Vec<Object> {
+    let mut result: Vec<Object> = vec![];
+
+    for exp in arguments {
+        let val = eval(exp, env);
+        if is_error(&val) {
+            result.push(val);
+            return result;
+        }
+        result.push(val);
+    }
+
+    result
 }
 
 fn is_truthy(condition: Object) -> bool {
