@@ -1,12 +1,12 @@
 use crate::evaluator::eval;
 use crate::lexer::Lexer;
-use crate::object::environment::new_environment;
+use crate::object::environment::Environment;
 use crate::parser::{ParseError, Parser};
 use std::io::{self, BufRead, Write};
 
 pub fn start(mut in_handler: io::StdinLock, mut out_handler: io::StdoutLock) {
     let mut buffer = String::new();
-    let mut env = new_environment();
+    let env = Environment::new();
     loop {
         write!(out_handler, ">>").unwrap();
         out_handler.flush().unwrap();
@@ -27,7 +27,7 @@ pub fn start(mut in_handler: io::StdinLock, mut out_handler: io::StdoutLock) {
             }
         };
 
-        let evaluated = eval(Box::new(program), env.as_mut());
+        let evaluated = eval(&program, env.clone());
 
         writeln!(out_handler, "{}", evaluated).unwrap();
     }

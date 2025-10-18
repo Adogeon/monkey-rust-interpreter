@@ -50,7 +50,7 @@ fn test_let_statments() -> Result<(), String> {
         assert!(test_let_statement(&*stmt, expected_identifier.to_string()).is_ok());
 
         if let Statement::LetStmt(s) = &stmt.as_ref() {
-            assert!(test_literal_expression(&*s.value, expected_value).is_ok());
+            assert!(test_literal_expression(&s.value, expected_value).is_ok());
         }
     }
 
@@ -119,7 +119,7 @@ fn test_interget_literal_expression() -> Result<(), String> {
             panic!("st is not a ExpressionStatement");
         };
 
-        if let Expression::IntLit(il) = ex_stmt.expression.as_ref() {
+        if let Expression::IntLit(il) = &ex_stmt.expression {
             assert_eq!(5, il.value, "literal.value not {}, got {}", 5, il.value);
             let tok_lit = il.token_literal().unwrap_or("blank");
             assert_eq!(
@@ -159,7 +159,7 @@ fn test_boolean_literal_expression() -> Result<(), String> {
             panic!("st is not a ExpressionStatement");
         };
 
-        if let Expression::BoolLit(bl) = ex_stmt.expression.as_ref() {
+        if let Expression::BoolLit(bl) = &ex_stmt.expression {
             assert_eq!(
                 true, bl.value,
                 "literal.value not {}, got {}",
@@ -208,13 +208,13 @@ fn test_parsing_prefix_expression() -> Result<(), String> {
             panic!("program.statements[0] is not an Expression Statement")
         };
 
-        if let Expression::PreExp(pe) = &exp_stmt.expression.as_ref() {
+        if let Expression::PreExp(pe) = &exp_stmt.expression {
             assert_eq!(
                 tcase.1, pe.operator,
                 "exp.Opartor is not {}, got={}",
                 tcase.1, pe.operator
             );
-            assert!(test_literal_expression(&*pe.right, tcase.2).is_ok());
+            assert!(test_literal_expression(&pe.right, tcase.2).is_ok());
         } else {
             panic!("exp_stmt is not a PrefixExpression")
         };
@@ -326,9 +326,9 @@ fn test_infix_expression(
     right: LiteralVal,
 ) -> Result<(), String> {
     if let Expression::InExp(infix_exp) = exp {
-        assert!(test_literal_expression(infix_exp.left.as_ref(), left).is_ok());
+        assert!(test_literal_expression(&infix_exp.left, left).is_ok());
         assert_eq!(operator, infix_exp.operator);
-        assert!(test_literal_expression(infix_exp.right.as_ref(), right).is_ok());
+        assert!(test_literal_expression(&infix_exp.right, right).is_ok());
         Ok(())
     } else {
         panic!("exp is not Infix Expression")
@@ -521,7 +521,7 @@ fn test_if_expression() -> Result<(), String> {
         panic!("program.statement[0] is not an Expression Statement");
     };
 
-    let if_exp = if let Expression::IfExp(exp) = &if_stmt.expression.as_ref() {
+    let if_exp = if let Expression::IfExp(exp) = &if_stmt.expression {
         exp
     } else {
         panic!("if_stmt.expression is not an If Expression");
@@ -537,7 +537,7 @@ fn test_if_expression() -> Result<(), String> {
             bs.statements.len()
         );
 
-        let consequences_stmt = if let Statement::ExpStmt(stmt) = &bs.statements[0].as_ref() {
+        let consequences_stmt = if let Statement::ExpStmt(stmt) = &bs.statements[0] {
             stmt
         } else {
             panic!("Consequence statements[0] is not an Expression Statement");
@@ -575,7 +575,7 @@ fn test_if_else_expression() -> Result<(), String> {
         panic!("program.statement[0] is not an Expression Statement");
     };
 
-    let if_exp = if let Expression::IfExp(exp) = if_stmt.expression.as_ref() {
+    let if_exp = if let Expression::IfExp(exp) = &if_stmt.expression {
         exp
     } else {
         panic!("if_stmt.expression is not an If Expression");
@@ -591,7 +591,7 @@ fn test_if_else_expression() -> Result<(), String> {
             bs.statements.len()
         );
 
-        let consequences_stmt = if let Statement::ExpStmt(stmt) = bs.statements[0].as_ref() {
+        let consequences_stmt = if let Statement::ExpStmt(stmt) = &bs.statements[0] {
             stmt
         } else {
             panic!("Consequence statements[0] is not an Expression Statement");
@@ -615,7 +615,7 @@ fn test_if_else_expression() -> Result<(), String> {
             bs.statements.len()
         );
 
-        let alternative_stmt = if let Statement::ExpStmt(stmt) = bs.statements[0].as_ref() {
+        let alternative_stmt = if let Statement::ExpStmt(stmt) = &bs.statements[0] {
             stmt
         } else {
             panic!("alternative statements[0] is not an Expression Statement");
@@ -648,7 +648,7 @@ fn test_function_literal_parsing() -> Result<(), String> {
         panic!("program.statements[0] is not a Expression Statement");
     };
 
-    let fnc_lit = if let Expression::FncLit(exp) = &exp_stmt.expression.as_ref() {
+    let fnc_lit = if let Expression::FncLit(exp) = &exp_stmt.expression {
         exp
     } else {
         panic!("exp_stmt expression is not Function Literal");
@@ -661,7 +661,7 @@ fn test_function_literal_parsing() -> Result<(), String> {
         fnc_lit.parameters.len()
     );
 
-    assert!(test_identifier(&*fnc_lit.parameters[0], "x".into()).is_ok());
+    assert!(test_identifier(&fnc_lit.parameters[0], "x".into()).is_ok());
     assert!(test_identifier(&fnc_lit.parameters[1], "y".into()).is_ok());
 
     if let Statement::BlcStmt(bs) = fnc_lit.body.as_ref() {
@@ -672,7 +672,7 @@ fn test_function_literal_parsing() -> Result<(), String> {
             bs.statements.len()
         );
 
-        if let Statement::ExpStmt(body_stmt) = bs.statements[0].as_ref() {
+        if let Statement::ExpStmt(body_stmt) = &bs.statements[0] {
             assert!(test_infix_expression(
                 &body_stmt.expression,
                 "x".into(),
@@ -711,7 +711,7 @@ fn test_function_parameter_parsing() -> Result<(), String> {
                 Statement::ExpStmt(s) => Some(s),
                 _ => None,
             })
-            .and_then(|exp_stmt| match &exp_stmt.expression.as_ref() {
+            .and_then(|exp_stmt| match &exp_stmt.expression {
                 Expression::FncLit(s) => Some(s),
                 _ => None,
             })
@@ -758,7 +758,7 @@ fn test_call_expression_parsing() -> Result<(), String> {
             Statement::ExpStmt(s) => Ok(s),
             _ => Err("program.statement[0] is not a Expression Statement"),
         })
-        .and_then(|exp_stmt| match &exp_stmt.expression.as_ref() {
+        .and_then(|exp_stmt| match &exp_stmt.expression {
             Expression::CallExp(s) => Ok(s),
             _ => Err("exp_stmt is not a Function call expression"),
         })?;

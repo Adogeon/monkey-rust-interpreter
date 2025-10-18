@@ -1,5 +1,6 @@
 use crate::token::Token;
 use std::fmt::Display;
+use std::rc::Rc;
 
 pub trait Node: Display {
     fn token_literal(&self) -> Option<&str>;
@@ -44,8 +45,8 @@ impl Display for Program {
 
 pub struct LetStatement {
     pub stmt_token: Token,
-    pub name: Box<Identifier>,
-    pub value: Box<Expression>,
+    pub name: Identifier,
+    pub value: Expression,
 }
 
 impl Node for LetStatement {
@@ -84,7 +85,7 @@ impl Display for ReturnStatement {
 
 pub struct ExpressionStatement {
     pub stmt_token: Token,
-    pub expression: Box<Expression>,
+    pub expression: Expression,
 }
 
 impl Node for ExpressionStatement {
@@ -101,7 +102,7 @@ impl Display for ExpressionStatement {
 
 pub struct BlockStatement {
     pub token: Token,
-    pub statements: Vec<Box<Statement>>,
+    pub statements: Vec<Statement>,
 }
 
 impl Node for BlockStatement {
@@ -121,10 +122,10 @@ impl Display for BlockStatement {
 }
 
 pub enum Statement {
-    LetStmt(Box<LetStatement>),
-    RetStmt(Box<ReturnStatement>),
-    ExpStmt(Box<ExpressionStatement>),
-    BlcStmt(Box<BlockStatement>),
+    LetStmt(LetStatement),
+    RetStmt(ReturnStatement),
+    ExpStmt(ExpressionStatement),
+    BlcStmt(BlockStatement),
 }
 
 impl Node for Statement {
@@ -149,6 +150,7 @@ impl Display for Statement {
     }
 }
 
+#[derive(Clone)]
 pub struct Identifier {
     pub token: Token,
     pub value: String,
@@ -166,6 +168,7 @@ impl Display for Identifier {
     }
 }
 
+#[derive(Clone)]
 pub struct IntegerLiteral {
     pub token: Token,
     pub value: i64,
@@ -186,7 +189,7 @@ impl Display for IntegerLiteral {
 pub struct PrefixExpression {
     pub token: Token,
     pub operator: String,
-    pub right: Box<Expression>,
+    pub right: Expression,
 }
 
 impl Node for PrefixExpression {
@@ -203,9 +206,9 @@ impl Display for PrefixExpression {
 
 pub struct InfixExpression {
     pub token: Token,
-    pub left: Box<Expression>,
+    pub left: Expression,
     pub operator: String,
-    pub right: Box<Expression>,
+    pub right: Expression,
 }
 
 impl Node for InfixExpression {
@@ -220,6 +223,7 @@ impl Display for InfixExpression {
     }
 }
 
+#[derive(Clone)]
 pub struct Boolean {
     pub token: Token,
     pub value: bool,
@@ -239,9 +243,9 @@ impl Display for Boolean {
 
 pub struct IfExpression {
     pub token: Token,
-    pub condition: Box<Expression>,
-    pub consequence: Box<Statement>,
-    pub alternative: Option<Box<Statement>>,
+    pub condition: Expression,
+    pub consequence: Rc<Statement>,
+    pub alternative: Option<Rc<Statement>>,
 }
 
 impl Node for IfExpression {
@@ -263,8 +267,8 @@ impl Display for IfExpression {
 
 pub struct FunctionLiteral {
     pub token: Token,
-    pub parameters: Vec<Box<Expression>>,
-    pub body: Box<Statement>,
+    pub parameters: Vec<Expression>,
+    pub body: Rc<Statement>,
 }
 
 impl Node for FunctionLiteral {
@@ -290,8 +294,8 @@ impl Display for FunctionLiteral {
 
 pub struct CallExpression {
     pub token: Token,
-    pub function: Box<Expression>,
-    pub arguments: Vec<Box<Expression>>,
+    pub function: Rc<Expression>,
+    pub arguments: Vec<Expression>,
 }
 
 impl Node for CallExpression {
@@ -312,15 +316,16 @@ impl Display for CallExpression {
     }
 }
 
+#[derive(Clone)]
 pub enum Expression {
-    Identifier(Box<Identifier>),
-    IntLit(Box<IntegerLiteral>),
-    PreExp(Box<PrefixExpression>),
-    InExp(Box<InfixExpression>),
-    BoolLit(Box<Boolean>),
-    IfExp(Box<IfExpression>),
-    FncLit(Box<FunctionLiteral>),
-    CallExp(Box<CallExpression>),
+    Identifier(Identifier),
+    IntLit(IntegerLiteral),
+    PreExp(Rc<PrefixExpression>),
+    InExp(Rc<InfixExpression>),
+    BoolLit(Boolean),
+    IfExp(Rc<IfExpression>),
+    FncLit(Rc<FunctionLiteral>),
+    CallExp(Rc<CallExpression>),
 }
 
 impl Node for Expression {

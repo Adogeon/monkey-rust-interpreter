@@ -1,14 +1,14 @@
-use crate::ast::{BlockStatement, Identifier};
-use environment::Environment;
+use crate::ast::{Expression, Statement};
+use environment::Env;
 use std::fmt::{Display, Write};
 use std::rc::Rc;
 
 pub mod environment;
 
 pub struct Function {
-    pub parameters: Vec<Box<Identifier>>,
-    pub body: Box<BlockStatement>,
-    pub env: Box<Environment>,
+    pub parameters: Vec<Expression>,
+    pub body: Rc<Statement>,
+    pub env: Env,
 }
 
 impl PartialEq for Function {

@@ -5,21 +5,26 @@ use std::rc::Rc;
 
 pub struct Environment {
     store: HashMap<String, Object>,
-    outer: Option<Rc<RefCell<Environment>>>,
+    outer: Option<Env>,
 }
 
-pub fn new_environment() -> Box<Environment> {
-    let store: HashMap<String, Object> = HashMap::new();
-    Box::new(Environment { store, outer: None })
-}
-
-pub fn new_enclosed_environment(outer: Rc<RefCell<Environment>>) -> Box<Environment> {
-    let mut env = new_environment();
-    env.outer = Some(outer);
-    env
-}
+pub type Env = Rc<RefCell<Environment>>;
 
 impl Environment {
+    pub fn new() -> Env {
+        Rc::new(RefCell::new(Environment {
+            store: HashMap::new(),
+            outer: None,
+        }))
+    }
+
+    pub fn extend(parent: &Env) -> Env {
+        Rc::new(RefCell::new(Environment {
+            store: HashMap::new(),
+            outer: Some(parent.clone()),
+        }))
+    }
+
     pub fn get(&self, name: &String) -> Option<Object> {
         let store_result = self.store.get(name);
         match store_result {

@@ -1,7 +1,6 @@
-use crate::ast::{Expression, Identifier, Program, Statement};
-use crate::object::environment::{new_enclosed_environment, Environment};
+use crate::ast::{BlockStatement, Expression, Program, Statement};
+use crate::object::environment::{Env, Environment};
 use crate::object::{Function, Object};
-use std::cell::RefCell;
 use std::rc::Rc;
 
 const TRUE: Object = Object::BOOLEAN(true);
@@ -17,14 +16,14 @@ fn is_error(input: &Object) -> bool {
 }
 
 pub trait Evaluable {
-    fn eval(self: Box<Self>, env: &mut Environment) -> Object;
+    fn eval(self: &Self, env: Env) -> Object;
 }
 
 impl Evaluable for Program {
-    fn eval(self: Box<Self>, env: &mut Environment) -> Object {
+    fn eval(self: &Self, env: Env) -> Object {
         let mut result = Object::NULL;
-        for stmt in self.statements {
-            result = eval(stmt, env);
+        for stmt in &self.statements {
+            result = eval(stmt.as_ref(), env.clone());
             if let Object::RETURN(rv) = result {
                 return *rv;
             } else if matches!(result, Object::ERROR(_)) {
@@ -36,92 +35,94 @@ impl Evaluable for Program {
 }
 
 impl Evaluable for Expression {
-    fn eval(self: Box<Self>, env: &mut Environment) -> Object {
-        match *self {
+    fn eval(self: &Self, env: Env) -> Object {
+        match self {
             Expression::IntLit(int_lit) => Object::INTEGER(int_lit.value),
-            Expression::Identifier(identifier) => match env.get(&identifier.value) {
+            Expression::Identifier(identifier) => match env.borrow().get(&identifier.value) {
                 Some(val) => val,
                 None => new_error(format!("identifier not found: {}", identifier.value)),
             },
             Expression::PreExp(prefix_expression) => {
-                let right = eval(prefix_expression.right, env);
+                let right = eval(&prefix_expression.right, env);
                 if is_error(&right) {
                     return right;
                 }
-                eval_prefix_expression(prefix_expression.operator, right)
+                eval_prefix_expression(prefix_expression.operator.clone(), right)
             }
             Expression::InExp(infix_expression) => {
-                let right = eval(infix_expression.right, env);
+                let right = eval(&infix_expression.right, env.clone());
                 if is_error(&right) {
                     return right;
                 }
-                let left = eval(infix_expression.left, env);
+                let left = eval(&infix_expression.left, env);
                 if is_error(&left) {
                     return left;
                 }
-                eval_infix_expression(infix_expression.operator, left, right)
+                eval_infix_expression(infix_expression.operator.clone(), left, right)
             }
             Expression::BoolLit(boolean) => native_bool_to_boolean_object(boolean.value),
             Expression::IfExp(if_expression) => {
-                let condition = eval(if_expression.condition, env);
+                let condition = eval(&if_expression.condition, env.clone());
                 if is_error(&condition) {
                     return condition;
                 }
 
                 if is_truthy(condition) {
                     if_expression.consequence.eval(env)
-                } else if let Some(alter) = if_expression.alternative {
+                } else if let Some(alter) = if_expression.alternative.as_ref() {
                     alter.eval(env)
                 } else {
                     NULL
                 }
             }
-            Expression::FncLit(function_literal) => {
-                let params = function_literal
-                    .parameters
-                    .into_iter()
-                    .map(|p| {
-                        if let Expression::Identifier(id) = *p {
-                            id
-                        } else {
-                            panic!("function parameters is not identifiers")
-                        }
-                    })
-                    .collect();
-
-                let body = if let Statement::BlcStmt(block) = *function_literal.body {
-                    block
-                } else {
-                    panic!("Abort, wrong type of statement in function body")
-                };
-
-                let outer = Rc::new(RefCell::new(*env));
-
-                Object::FUNCTION(Rc::new(Function {
-                    parameters: params,
-                    body,
-                    env: new_enclosed_environment(outer),
-                }))
-            }
+            Expression::FncLit(function_literal) => Object::FUNCTION(Rc::new(Function {
+                parameters: function_literal.parameters.clone(),
+                body: function_literal.body.clone(),
+                env: Environment::extend(&env),
+            })),
             Expression::CallExp(call_expression) => {
-                let function = call_expression.function.eval(env);
+                let function = call_expression.function.eval(env.clone());
                 if is_error(&function) {
-                    function
+                    return function;
                 }
-                let args = eval_expressions(call_expression.arguments, env);
+                let args = eval_expressions(call_expression.arguments.clone(), env);
                 if args.len() == 1 && is_error(&args[0]) {
-                    args[0]
+                    return args[0].clone();
                 }
+
+                apply_function(function, args)
             }
         }
     }
 }
 
-fn eval_expressions(arguments: Vec<Box<Expression>>, env: &mut Environment) -> Vec<Object> {
+fn apply_function(function: Object, args: Vec<Object>) -> Object {
+    if let Object::FUNCTION(fnc) = function {
+        let extended_env = extend_function_env(fnc.clone(), args);
+        let val = if let Statement::BlcStmt(block) = fnc.body.as_ref() {
+            eval_block_statement(block, extended_env)
+        } else {
+            new_error(format!("body is not a block"))
+        };
+        unwrap_return_value(val)
+    } else {
+        new_error(format!("not a function:{}", function.ob_type()))
+    }
+}
+
+fn unwrap_return_value(val: Object) -> Object {
+    todo!()
+}
+
+fn extend_function_env(fnc: Rc<Function>, args: Vec<Object>) -> Env {
+    todo!()
+}
+
+fn eval_expressions(arguments: Vec<Expression>, env: Env) -> Vec<Object> {
     let mut result: Vec<Object> = vec![];
 
     for exp in arguments {
-        let val = eval(exp, env);
+        let val = eval(&exp, env.clone());
         if is_error(&val) {
             result.push(val);
             return result;
@@ -226,15 +227,16 @@ fn eval_bang_operator_expression(right: Object) -> Object {
 }
 
 impl Evaluable for Statement {
-    fn eval(self: Box<Self>, env: &mut Environment) -> Object {
-        match *self {
+    fn eval(self: &Self, env: Env) -> Object {
+        match self {
             Statement::ExpStmt(exp_stmt) => exp_stmt.expression.eval(env),
             Statement::LetStmt(let_statement) => {
-                let value = let_statement.value.eval(env);
+                let value = let_statement.value.eval(env.clone());
                 if is_error(&value) {
                     return value;
                 }
-                env.set(let_statement.name.value, &value);
+                env.borrow_mut()
+                    .set(let_statement.name.value.clone(), &value);
                 value
             }
             Statement::RetStmt(return_statement) => {
@@ -244,24 +246,26 @@ impl Evaluable for Statement {
                 }
                 Object::RETURN(Box::new(value))
             }
-            Statement::BlcStmt(block_statement) => {
-                let mut result: Object = Object::NULL;
-                for stmt in block_statement.statements {
-                    result = eval(stmt, env);
-                    if !matches!(result, Object::NULL) {
-                        if matches!(result, Object::RETURN(_)) || matches!(result, Object::ERROR(_))
-                        {
-                            return result;
-                        }
-                    }
-                }
-                return result;
-            }
+            Statement::BlcStmt(block_statement) => eval_block_statement(block_statement, env),
         }
     }
 }
 
-pub fn eval(node: Box<dyn Evaluable>, env: &mut Environment) -> Object {
+fn eval_block_statement(block: &BlockStatement, env: Env) -> Object {
+    let mut result: Object = Object::NULL;
+    let block_env = Environment::extend(&env);
+    for stmt in &block.statements {
+        result = eval(stmt, block_env.clone());
+        if !matches!(result, Object::NULL) {
+            if matches!(result, Object::RETURN(_)) || matches!(result, Object::ERROR(_)) {
+                return result;
+            }
+        }
+    }
+    return result;
+}
+
+pub fn eval<T: Evaluable>(node: &T, env: Env) -> Object {
     node.eval(env)
 }
 

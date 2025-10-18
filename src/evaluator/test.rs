@@ -36,8 +36,8 @@ fn test_eval(input: &str) -> Result<Object, String> {
         .parse_program()
         .map_err(|err| format!("Parsing error: {err}"))?;
 
-    let mut env = new_environment();
-    Ok(eval(Box::new(program), env.as_mut()))
+    let env = Environment::new();
+    Ok(eval(&program, env))
 }
 
 fn test_integer_object(obj: &Object, expected: i64) -> Result<(), String> {
