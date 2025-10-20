@@ -75,11 +75,25 @@ impl Evaluable for Expression {
                     NULL
                 }
             }
-            Expression::FncLit(function_literal) => Object::FUNCTION(Rc::new(Function {
-                parameters: function_literal.parameters.clone(),
-                body: function_literal.body.clone(),
-                env: Environment::extend(&env),
-            })),
+            Expression::FncLit(function_literal) => {
+                let fn_para = function_literal
+                    .parameters
+                    .iter()
+                    .map(|p| {
+                        if let Expression::Identifier(id) = p {
+                            id.clone()
+                        } else {
+                            panic!("function parameters is not id")
+                        }
+                    })
+                    .collect();
+
+                Object::FUNCTION(Rc::new(Function {
+                    parameters: fn_para,
+                    body: function_literal.body.clone(),
+                    env: Environment::extend(&env),
+                }))
+            }
             Expression::CallExp(call_expression) => {
                 let function = call_expression.function.eval(env.clone());
                 if is_error(&function) {
@@ -111,11 +125,20 @@ fn apply_function(function: Object, args: Vec<Object>) -> Object {
 }
 
 fn unwrap_return_value(val: Object) -> Object {
-    todo!()
+    if let Object::RETURN(rv) = val {
+        *rv
+    } else {
+        val
+    }
 }
 
-fn extend_function_env(fnc: Rc<Function>, args: Vec<Object>) -> Env {
-    todo!()
+fn extend_function_env(fn_rc: Rc<Function>, args: Vec<Object>) -> Env {
+    let f_env = Environment::extend(&fn_rc.env);
+    for (index, param) in fn_rc.parameters.iter().enumerate() {
+        f_env.borrow_mut().set(param.value.clone(), &args[index]);
+    }
+
+    f_env
 }
 
 fn eval_expressions(arguments: Vec<Expression>, env: Env) -> Vec<Object> {

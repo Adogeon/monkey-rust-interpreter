@@ -269,3 +269,17 @@ fn test_functions_application() -> Result<(), String> {
     }
     Ok(())
 }
+
+#[test]
+fn test_closures() -> Result<(), String> {
+    let input = "
+        let newAdder = fn(x) {
+            fn(y) {x + y};
+        };
+        let addTwo = newAdder(2);
+        addTwo(2);
+    ";
+    let val = test_eval(input)?;
+    test_integer_object(&val, 4.into())?;
+    Ok(())
+}

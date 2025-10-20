@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Statement};
+use crate::ast::{Identifier, Statement};
 use environment::Env;
 use std::fmt::{Display, Write};
 use std::rc::Rc;
@@ -6,7 +6,7 @@ use std::rc::Rc;
 pub mod environment;
 
 pub struct Function {
-    pub parameters: Vec<Expression>,
+    pub parameters: Vec<Identifier>,
     pub body: Rc<Statement>,
     pub env: Env,
 }
