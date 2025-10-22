@@ -186,6 +186,24 @@ impl Display for IntegerLiteral {
     }
 }
 
+#[derive(Clone)]
+pub struct StringLiteral {
+    pub token: Token,
+    pub value: String,
+}
+
+impl Node for StringLiteral {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for StringLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.token.tok_literal)
+    }
+}
+
 pub struct PrefixExpression {
     pub token: Token,
     pub operator: String,
@@ -319,6 +337,7 @@ impl Display for CallExpression {
 #[derive(Clone)]
 pub enum Expression {
     Identifier(Identifier),
+    StringLit(StringLiteral),
     IntLit(IntegerLiteral),
     PreExp(Rc<PrefixExpression>),
     InExp(Rc<InfixExpression>),
@@ -333,6 +352,7 @@ impl Node for Expression {
         match self {
             Self::Identifier(ident) => ident.token_literal(),
             Self::IntLit(int_lit) => int_lit.token_literal(),
+            Self::StringLit(str_lit) => str_lit.token_literal(),
             Self::PreExp(pe) => pe.token_literal(),
             Self::InExp(ie) => ie.token_literal(),
             Self::BoolLit(bl) => bl.token_literal(),
@@ -348,6 +368,7 @@ impl Display for Expression {
         match self {
             Self::Identifier(id) => write!(f, "{id}"),
             Self::IntLit(int_lit) => write!(f, "{int_lit}"),
+            Self::StringLit(str_lit) => write!(f, "{str_lit}"),
             Self::PreExp(pe) => write!(f, "{pe}"),
             Self::InExp(ie) => write!(f, "{ie}"),
             Self::BoolLit(bl) => write!(f, "{bl}"),

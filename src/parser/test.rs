@@ -763,7 +763,7 @@ fn test_call_expression_parsing() -> Result<(), String> {
             _ => Err("exp_stmt is not a Function call expression"),
         })?;
 
-    assert!(test_identifier(&exp.function, "add".into()).is_ok());
+    test_identifier(&exp.function, "add".into())?;
     assert_eq!(
         3,
         exp.arguments.len(),
@@ -771,8 +771,40 @@ fn test_call_expression_parsing() -> Result<(), String> {
         exp.arguments.len()
     );
 
-    assert!(test_literal_expression(&exp.arguments[0], 1.into()).is_ok());
-    assert!(test_infix_expression(&exp.arguments[1], 2.into(), "*".into(), 3.into()).is_ok());
-    assert!(test_infix_expression(&exp.arguments[2], 4.into(), "+".into(), 5.into()).is_ok());
+    test_literal_expression(&exp.arguments[0], 1.into())?;
+    test_infix_expression(&exp.arguments[1], 2.into(), "*".into(), 3.into())?;
+    test_infix_expression(&exp.arguments[2], 4.into(), "+".into(), 5.into())?;
+    Ok(())
+}
+
+#[test]
+fn test_string_literal_expression() -> Result<(), String> {
+    let input = "\"hello world\";";
+
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Parssing error: {err}"))?;
+
+    let str_lit = program
+        .statements
+        .get(0)
+        .ok_or("Can't find program index 0")
+        .and_then(|stmt| match stmt.as_ref() {
+            Statement::ExpStmt(s) => Ok(s),
+            _ => Err("Statement is not an Expression Statement"),
+        })
+        .and_then(|exp_stmt| match &exp_stmt.expression {
+            Expression::StringLit(str_lit) => Ok(str_lit),
+            _ => Err("Expression is not a String Literal"),
+        })?;
+
+    assert_eq!(
+        "hello world", str_lit.value,
+        "str_lit.value not {}, got = {}",
+        "hello world", str_lit.value
+    );
+
     Ok(())
 }
