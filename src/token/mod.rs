@@ -7,6 +7,7 @@ pub enum TType {
     // Identifiers + Literals
     IDENT,
     INT,
+    STRING,
     // Operators
     ASSIGN,
     PLUS,

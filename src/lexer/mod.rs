@@ -96,6 +96,13 @@ impl<'a> Lexer<'a> {
                     Token::new(TType::BANG, "!")
                 }
             }
+            Some(k) if k == '"' || k == '\"' => {
+                let literal = self.read_string();
+                Token {
+                    tok_type: TType::STRING,
+                    tok_literal: literal,
+                }
+            }
             Some(c) => {
                 if is_letter(c) {
                     let literal = self.read_mult_char(is_letter);
@@ -118,6 +125,23 @@ impl<'a> Lexer<'a> {
         };
         self.read_char();
         tok
+    }
+
+    fn read_string(&mut self) -> String {
+        self.read_char();
+        let mut buf: Vec<char> = vec![];
+        while let Some(c) = self.ch {
+            buf.push(c);
+            if let Some(next) = self.peek_next() {
+                if *next == '"' || *next == '\"' {
+                    self.input_iter.next();
+                    break;
+                } else {
+                    self.read_char();
+                }
+            }
+        }
+        buf.iter().collect()
     }
 }
 

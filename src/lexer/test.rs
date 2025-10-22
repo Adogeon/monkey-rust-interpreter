@@ -2,7 +2,7 @@ use super::*;
 use crate::token::TType;
 
 #[test]
-fn it_works() {
+fn test_next_token() {
     let input = "let five = 5;
     let ten = 10;
     let add = fn(x,y) {
@@ -21,6 +21,8 @@ fn it_works() {
     
     10 == 10;
     10 != 9;
+    \"foobar\"
+    \"foo bar\"
     ";
 
     let expected_results = vec![
@@ -97,6 +99,8 @@ fn it_works() {
         (TType::NOTEQ, "!="),
         (TType::INT, "9"),
         (TType::SEMICOLON, ";"),
+        (TType::STRING, "foobar"),
+        (TType::STRING, "foo bar"),
         (TType::EOF, ""),
     ];
 
