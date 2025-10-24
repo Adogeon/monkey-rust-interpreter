@@ -283,3 +283,18 @@ fn test_closures() -> Result<(), String> {
     test_integer_object(&val, 4.into())?;
     Ok(())
 }
+
+#[test]
+fn test_string_literal() -> Result<(), String> {
+    let input = "\"Hello World!\"";
+
+    let val = test_eval(input)?;
+
+    if let Object::STRING(str) = val {
+        assert_eq!("Hello World!", str);
+    } else {
+        panic!("Result is not a STRING OBJECT")
+    }
+
+    Ok(())
+}

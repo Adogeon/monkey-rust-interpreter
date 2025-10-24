@@ -215,6 +215,7 @@ impl<'a> Parser<'a> {
         match tok_type {
             TType::IDENT => self.parse_identifier(),
             TType::INT => self.parse_integer_literal(),
+            TType::STRING => self.parse_string_literal(),
             TType::BANG | TType::MINUS => self.parse_prefix_expression(),
             TType::TRUE | TType::FALSE => self.parse_boolean(),
             TType::LPAREN => self.parse_grouped_expression(),
@@ -286,6 +287,14 @@ impl<'a> Parser<'a> {
             token: int_token,
             value,
         }))
+    }
+
+    fn parse_string_literal(&self) -> Result<Expression, ParseError> {
+        let string_lit = ast::StringLiteral {
+            token: self.cur_token.clone(),
+            value: self.cur_token.clone().tok_literal,
+        };
+        Ok(Expression::StringLit(string_lit))
     }
 
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {

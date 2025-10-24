@@ -24,6 +24,7 @@ impl PartialEq for Function {
 #[derive(PartialEq, Clone)]
 pub enum Object {
     INTEGER(i64),
+    STRING(String),
     BOOLEAN(bool),
     RETURN(Box<Object>),
     FUNCTION(Rc<Function>),
@@ -35,6 +36,7 @@ impl Object {
     fn inspect(&self) -> String {
         match self {
             Self::INTEGER(val) => format!("{}", val),
+            Self::STRING(val) => format!("{}", val),
             Self::BOOLEAN(val) => format!("{}", val),
             Self::RETURN(val) => format!("{}", val.inspect()),
             Self::ERROR(val) => format!("{}", val),
@@ -57,6 +59,7 @@ impl Object {
     pub fn ob_type(&self) -> &str {
         match self {
             Self::INTEGER(_) => "INTEGER",
+            Self::STRING(_) => "STRING",
             Self::BOOLEAN(_) => "BOOLEAN",
             Self::RETURN(_) => "RETURN_OBJ",
             Self::ERROR(_) => "ERROR",
@@ -68,6 +71,6 @@ impl Object {
 
 impl Display for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.ob_type(), self.inspect())
+        write!(f, "{}", self.inspect())
     }
 }

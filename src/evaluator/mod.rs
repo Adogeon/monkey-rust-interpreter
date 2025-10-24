@@ -106,6 +106,7 @@ impl Evaluable for Expression {
 
                 apply_function(function, args)
             }
+            Expression::StringLit(str_lit) => Object::STRING(str_lit.value.clone()),
         }
     }
 }
