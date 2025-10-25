@@ -189,6 +189,10 @@ fn test_error_handling() -> Result<(), String> {
             "if (10 > 1) { if(10 > 1) { return true + false;} return 1;};",
             "unknown operator:BOOLEAN + BOOLEAN",
         ),
+        (
+            "\"Hello\" - \"World!\"",
+            "unknown operator: STRING - STRING",
+        ),
     ];
 
     for (input, expected) in test_cases {
@@ -297,4 +301,23 @@ fn test_string_literal() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[test]
+fn test_string_concatination() -> Result<(), String> {
+    let input = "\"Hello\" + \" \" + \"World!\"";
+    let val = test_eval(input)?;
+
+    if let Object::STRING(str) = val {
+        assert_eq!("Hello World!", str);
+    } else {
+        panic!("Result is not a STRING OBJECT")
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_builtin_functions() -> Result<(), String> {
+    todo!()
 }

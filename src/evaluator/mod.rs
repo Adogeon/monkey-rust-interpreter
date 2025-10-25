@@ -1,15 +1,12 @@
 use crate::ast::{BlockStatement, Expression, Program, Statement};
+use crate::object::builtins::builtins_fn;
 use crate::object::environment::{Env, Environment};
-use crate::object::{Function, Object};
+use crate::object::{new_error, Function, Object};
 use std::rc::Rc;
 
 const TRUE: Object = Object::BOOLEAN(true);
 const FALSE: Object = Object::BOOLEAN(false);
 const NULL: Object = Object::NULL;
-
-fn new_error(msg: String) -> Object {
-    Object::ERROR(msg)
-}
 
 fn is_error(input: &Object) -> bool {
     matches!(input, Object::ERROR(_))
@@ -40,7 +37,13 @@ impl Evaluable for Expression {
             Expression::IntLit(int_lit) => Object::INTEGER(int_lit.value),
             Expression::Identifier(identifier) => match env.borrow().get(&identifier.value) {
                 Some(val) => val,
-                None => new_error(format!("identifier not found: {}", identifier.value)),
+                None => {
+                    let builtin_fn = builtins_fn(&identifier.value);
+                    if matches!(builtin_fn, Object::NULL) {
+                        return new_error(format!("Identifier not found: {}", identifier.value));
+                    };
+                    builtin_fn
+                }
             },
             Expression::PreExp(prefix_expression) => {
                 let right = eval(&prefix_expression.right, env);
@@ -120,6 +123,8 @@ fn apply_function(function: Object, args: Vec<Object>) -> Object {
             new_error(format!("body is not a block"))
         };
         unwrap_return_value(val)
+    } else if let Object::BUILTIN(b_fn) = function {
+        (b_fn.function)(args)
     } else {
         new_error(format!("not a function:{}", function.ob_type()))
     }
@@ -167,6 +172,8 @@ fn is_truthy(condition: Object) -> bool {
 fn eval_infix_expression(operator: String, left: Object, right: Object) -> Object {
     if matches!(left, Object::INTEGER(_)) && matches!(right, Object::INTEGER(_)) {
         eval_integer_infix_expression(operator, left, right)
+    } else if matches!(left, Object::STRING(_)) && matches!(right, Object::STRING(_)) {
+        eval_string_infix_expression(operator, left, right)
     } else if operator.as_str() == "==" {
         native_bool_to_boolean_object(left == right)
     } else if operator.as_str() == "!=" {
@@ -215,6 +222,27 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
             right.ob_type(),
         )),
     }
+}
+
+fn eval_string_infix_expression(operator: String, left: Object, right: Object) -> Object {
+    if operator != "+" {
+        return new_error(format!(
+            "unknown operator: {} {} {}",
+            left.ob_type(),
+            operator,
+            right.ob_type(),
+        ));
+    }
+    let left_val = match left {
+        Object::STRING(str) => str,
+        _ => String::from(""),
+    };
+    let right_val = match right {
+        Object::STRING(str) => str,
+        _ => String::from(""),
+    };
+
+    Object::STRING(left_val + &right_val)
 }
 
 fn native_bool_to_boolean_object(value: bool) -> Object {

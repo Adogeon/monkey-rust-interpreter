@@ -3,7 +3,12 @@ use environment::Env;
 use std::fmt::{Display, Write};
 use std::rc::Rc;
 
+pub mod builtins;
 pub mod environment;
+
+pub fn new_error(msg: String) -> Object {
+    Object::ERROR(msg)
+}
 
 pub struct Function {
     pub parameters: Vec<Identifier>,
@@ -21,6 +26,20 @@ impl PartialEq for Function {
     }
 }
 
+type BuiltinFunction = fn(params: Vec<Object>) -> Object;
+
+pub struct Builtin {
+    pub function: BuiltinFunction,
+}
+impl PartialEq for Builtin {
+    fn eq(&self, _other: &Self) -> bool {
+        false
+    }
+
+    fn ne(&self, _other: &Self) -> bool {
+        true
+    }
+}
 #[derive(PartialEq, Clone)]
 pub enum Object {
     INTEGER(i64),
@@ -28,6 +47,7 @@ pub enum Object {
     BOOLEAN(bool),
     RETURN(Box<Object>),
     FUNCTION(Rc<Function>),
+    BUILTIN(Rc<Builtin>),
     ERROR(String),
     NULL,
 }
@@ -52,6 +72,7 @@ impl Object {
                 write!(buffer, "{{/n {} /n}}", val.body.to_string()).unwrap();
                 buffer
             }
+            Self::BUILTIN(_) => String::from("Builtin function"),
             Self::NULL => String::from("null"),
         }
     }
@@ -64,6 +85,7 @@ impl Object {
             Self::RETURN(_) => "RETURN_OBJ",
             Self::ERROR(_) => "ERROR",
             Self::FUNCTION(_) => "FUNCTION",
+            Self::BUILTIN(_) => "BUILTIN_FN",
             Self::NULL => "NULL",
         }
     }
