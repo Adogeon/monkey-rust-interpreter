@@ -319,5 +319,34 @@ fn test_string_concatination() -> Result<(), String> {
 
 #[test]
 fn test_builtin_functions() -> Result<(), String> {
-    todo!()
+    let test_cases = vec![
+        ("len(\"\")", "0"),
+        ("len(\"four\")", "4"),
+        ("len(\"(hello world\")", "11"),
+        ("len(1)", "argument to `len` not supported, got INTEGER"),
+        (
+            "len(\"one\", \"two\")",
+            "wrong number of arguements.got=2, want=1",
+        ),
+    ];
+
+    for (input, expected) in test_cases {
+        let val = test_eval(input)?;
+        let expect_clone = expected;
+        expected.parse::<i64>().map_or_else(
+            |_e| {
+                if let Object::ERROR(msg) = &val {
+                    assert_eq!(
+                        msg, expect_clone,
+                        "wrong error message. expected={expect_clone}, got={msg}"
+                    );
+                    Ok(())
+                } else {
+                    return Err(format!("object is not Error, got={}", val.ob_type()));
+                }
+            },
+            |v| test_integer_object(&val, v),
+        )?;
+    }
+    Ok(())
 }
