@@ -129,6 +129,13 @@ impl<'a> Lexer<'a> {
 
     fn read_string(&mut self) -> String {
         self.read_char();
+
+        if let Some(c) = self.ch {
+            if c == '"' || c == '\"' {
+                return String::from("");
+            }
+        }
+
         let mut buf: Vec<char> = vec![];
         while let Some(c) = self.ch {
             buf.push(c);
