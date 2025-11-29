@@ -80,6 +80,8 @@ impl<'a> Lexer<'a> {
             Some(')') => Token::new(TType::RPAREN, ")"),
             Some('{') => Token::new(TType::LBRACE, "{"),
             Some('}') => Token::new(TType::RBRACE, "}"),
+            Some('[') => Token::new(TType::LBRACKET, "["),
+            Some(']') => Token::new(TType::RBRACKET, "]"),
             Some('=') => {
                 if self.peek_next() == Some(&'=') {
                     self.read_char();

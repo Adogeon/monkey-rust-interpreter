@@ -23,6 +23,7 @@ fn test_next_token() {
     10 != 9;
     \"foobar\"
     \"foo bar\"
+    [1,2];
     ";
 
     let expected_results = vec![
@@ -101,6 +102,10 @@ fn test_next_token() {
         (TType::SEMICOLON, ";"),
         (TType::STRING, "foobar"),
         (TType::STRING, "foo bar"),
+        (TType::LBRACKET, "["),
+        (TType::INT, "1"),
+        (TType::INT, "2"),
+        (TType::RBRACKET, "]"),
         (TType::EOF, ""),
     ];
 

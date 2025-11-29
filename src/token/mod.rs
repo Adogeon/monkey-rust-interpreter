@@ -26,6 +26,8 @@ pub enum TType {
     RPAREN,
     LBRACE,
     RBRACE,
+    LBRACKET,
+    RBRACKET,
     //KEYWORD
     FUNCTION,
     LET,
