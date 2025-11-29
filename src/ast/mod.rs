@@ -334,6 +334,29 @@ impl Display for CallExpression {
     }
 }
 
+pub struct ArrayExpression {
+    pub token: Token,
+    pub elements: Vec<Expression>,
+}
+
+impl Node for ArrayExpression {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for ArrayExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let elem_string = self
+            .elements
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+        write!(f, "[{elem_string}]")
+    }
+}
+
 #[derive(Clone)]
 pub enum Expression {
     Identifier(Identifier),
@@ -345,6 +368,7 @@ pub enum Expression {
     IfExp(Rc<IfExpression>),
     FncLit(Rc<FunctionLiteral>),
     CallExp(Rc<CallExpression>),
+    ArrayExp(Rc<ArrayExpression>),
 }
 
 impl Node for Expression {
@@ -359,6 +383,7 @@ impl Node for Expression {
             Self::IfExp(ife) => ife.token_literal(),
             Self::FncLit(fnl) => fnl.token_literal(),
             Self::CallExp(ce) => ce.token_literal(),
+            Self::ArrayExp(ae) => ae.token_literal(),
         }
     }
 }
@@ -375,6 +400,7 @@ impl Display for Expression {
             Self::IfExp(ife) => write!(f, "{ife}"),
             Self::FncLit(fnl) => write!(f, "{fnl}"),
             Self::CallExp(ce) => write!(f, "{ce}"),
+            Self::ArrayExp(ae) => write!(f, "{ae}"),
         }
     }
 }
