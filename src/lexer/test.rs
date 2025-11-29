@@ -104,8 +104,10 @@ fn test_next_token() {
         (TType::STRING, "foo bar"),
         (TType::LBRACKET, "["),
         (TType::INT, "1"),
+        (TType::COMMA, ","),
         (TType::INT, "2"),
         (TType::RBRACKET, "]"),
+        (TType::SEMICOLON, ";"),
         (TType::EOF, ""),
     ];
 
