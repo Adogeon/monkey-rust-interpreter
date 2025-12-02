@@ -221,6 +221,7 @@ impl<'a> Parser<'a> {
             TType::LPAREN => self.parse_grouped_expression(),
             TType::IF => self.parse_if_expression(),
             TType::FUNCTION => self.parse_function_literal(),
+            TType::LBRACKET => self.parse_array_literal(),
             _ => Err(ParseError::NoPrefixParseFnError(tok_type)),
         }
     }
@@ -493,6 +494,40 @@ impl<'a> Parser<'a> {
         }
 
         Ok(args)
+    }
+
+    fn parse_array_literal(&mut self) -> Result<Expression, ParseError> {
+        let elements = self.parse_expression_list(TType::RBRACKET)?;
+
+        Ok(Expression::ArrayExp(Rc::new(ast::ArrayExpression {
+            token: self.cur_token.clone(),
+            elements,
+        })))
+    }
+
+    fn parse_expression_list(&mut self, end: TType) -> Result<Vec<Expression>, ParseError> {
+        let mut list: Vec<Expression> = vec![];
+
+        if self.peek_tok_is(end).is_some() {
+            self.next_tok();
+            return Ok(list);
+        }
+
+        self.next_tok();
+        list.push(self.parse_expression(Precedent::LOWEST)?);
+
+        while self.peek_tok_is(TType::COMMA).is_some() {
+            self.next_tok();
+            self.next_tok();
+
+            list.push(self.parse_expression(Precedent::LOWEST)?);
+        }
+
+        if self.expect_peek(TType::RBRACKET).is_none() {
+            return Err(ParseError::MissingClosing(TType::RBRACKET));
+        }
+
+        Ok(list)
     }
 }
 

@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::{Node, Statement};
+use crate::ast::{ArrayExpression, Node, Statement};
 use crate::lexer::Lexer;
 
 fn test_let_statement(stmt: &Statement, name: String) -> Result<(), String> {
@@ -805,6 +805,53 @@ fn test_string_literal_expression() -> Result<(), String> {
         "str_lit.value not {}, got = {}",
         "hello world", str_lit.value
     );
+
+    Ok(())
+}
+
+#[test]
+fn test_parsing_array_literals() -> Result<(), String> {
+    let input = "[1,2*2,3+3]";
+
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Parsing error: {err}"))?;
+
+    let array_exp = program
+        .statements
+        .get(0)
+        .ok_or("Can't find program index 0")
+        .and_then(|stmt| match stmt.as_ref() {
+            Statement::ExpStmt(s) => Ok(s),
+            _ => Err("Statement is not an Expression Statement"),
+        })
+        .and_then(|exp_stmt| match &exp_stmt.expression {
+            Expression::ArrayExp(array_exp) => Ok(array_exp),
+            _ => Err("Expression is not an Array Literal"),
+        })?;
+
+    assert_eq!(
+        array_exp.elements.len(),
+        3,
+        "array.elements.len() not 3. got={}",
+        array_exp.elements.len()
+    );
+
+    test_integer_literal(&array_exp.elements[0], 1)?;
+    test_infix_expression(
+        &array_exp.elements[1],
+        2.into(),
+        String::from("*"),
+        2.into(),
+    )?;
+    test_infix_expression(
+        &array_exp.elements[2],
+        3.into(),
+        String::from("+"),
+        3.into(),
+    )?;
 
     Ok(())
 }
