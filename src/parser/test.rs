@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::{ArrayExpression, Node, Statement};
+use crate::ast::{Node, Program, Statement};
 use crate::lexer::Lexer;
 
 fn test_let_statement(stmt: &Statement, name: String) -> Result<(), String> {
@@ -852,6 +852,34 @@ fn test_parsing_array_literals() -> Result<(), String> {
         String::from("+"),
         3.into(),
     )?;
+
+    Ok(())
+}
+
+#[test]
+fn test_parsing_index_expression() -> Result<(), String> {
+    let input = "myArray[1+1]";
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Parsing error:{err}"))?;
+
+    let index_exp = program
+        .statements
+        .get(0)
+        .ok_or("Can't find program statement at index 0")
+        .and_then(|stmt| match stmt.as_ref() {
+            Statement::ExpStmt(es) => Ok(es),
+            _ => Err("Statement is not an Expression Statement"),
+        })
+        .and_then(|exp_stmt| match &exp_stmt.expression {
+            Expression::IndexExp(ide) => Ok(ide),
+            _ => Err("Expression is not an Index Expression"),
+        })?;
+
+    test_identifier(&index_exp.left, "myArray".to_string())?;
+    test_infix_expression(&index_exp.index, 1.into(), "+".to_string(), 1.into())?;
 
     Ok(())
 }

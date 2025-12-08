@@ -357,6 +357,24 @@ impl Display for ArrayExpression {
     }
 }
 
+pub struct IndexExpression {
+    pub token: Token,
+    pub left: Rc<Expression>,
+    pub index: Expression,
+}
+
+impl Node for IndexExpression {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for IndexExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}[{}])", self.left, self.index)
+    }
+}
+
 #[derive(Clone)]
 pub enum Expression {
     Identifier(Identifier),
@@ -369,6 +387,7 @@ pub enum Expression {
     FncLit(Rc<FunctionLiteral>),
     CallExp(Rc<CallExpression>),
     ArrayExp(Rc<ArrayExpression>),
+    IndexExp(Rc<IndexExpression>),
 }
 
 impl Node for Expression {
@@ -384,6 +403,7 @@ impl Node for Expression {
             Self::FncLit(fnl) => fnl.token_literal(),
             Self::CallExp(ce) => ce.token_literal(),
             Self::ArrayExp(ae) => ae.token_literal(),
+            Self::IndexExp(ide) => ide.token_literal(),
         }
     }
 }
@@ -401,6 +421,7 @@ impl Display for Expression {
             Self::FncLit(fnl) => write!(f, "{fnl}"),
             Self::CallExp(ce) => write!(f, "{ce}"),
             Self::ArrayExp(ae) => write!(f, "{ae}"),
+            Self::IndexExp(ide) => write!(f, "{ide}"),
         }
     }
 }

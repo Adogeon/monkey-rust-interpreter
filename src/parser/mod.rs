@@ -461,39 +461,13 @@ impl<'a> Parser<'a> {
         function: Rc<Expression>,
     ) -> Result<Expression, ParseError> {
         let token = self.cur_token.clone();
-        let arguments = self.parse_call_arguments()?;
+        let arguments = self.parse_expression_list(TType::RPAREN)?;
 
         Ok(Expression::CallExp(Rc::new(ast::CallExpression {
             token,
             function,
             arguments,
         })))
-    }
-
-    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
-        let mut args: Vec<Expression> = vec![];
-
-        if self.peek_tok_is(TType::RPAREN).is_some() {
-            self.next_tok();
-            return Ok(args);
-        }
-
-        self.next_tok();
-
-        self.parse_expression(Precedent::LOWEST)
-            .map(|exp| args.push(exp))?;
-        while self.peek_tok_is(TType::COMMA).is_some() {
-            self.next_tok();
-            self.next_tok();
-            self.parse_expression(Precedent::LOWEST)
-                .map(|exp| args.push(exp))?;
-        }
-
-        if self.expect_peek(TType::RPAREN).is_none() {
-            return Err(ParseError::MissingClosing(TType::RPAREN));
-        }
-
-        Ok(args)
     }
 
     fn parse_array_literal(&mut self) -> Result<Expression, ParseError> {
@@ -508,7 +482,7 @@ impl<'a> Parser<'a> {
     fn parse_expression_list(&mut self, end: TType) -> Result<Vec<Expression>, ParseError> {
         let mut list: Vec<Expression> = vec![];
 
-        if self.peek_tok_is(end).is_some() {
+        if self.peek_tok_is(end.clone()).is_some() {
             self.next_tok();
             return Ok(list);
         }
@@ -523,10 +497,9 @@ impl<'a> Parser<'a> {
             list.push(self.parse_expression(Precedent::LOWEST)?);
         }
 
-        if self.expect_peek(TType::RBRACKET).is_none() {
-            return Err(ParseError::MissingClosing(TType::RBRACKET));
+        if self.expect_peek(end.clone()).is_none() {
+            return Err(ParseError::MissingClosing(end));
         }
-
         Ok(list)
     }
 }
