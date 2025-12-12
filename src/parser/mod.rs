@@ -142,13 +142,12 @@ impl<'a> Parser<'a> {
             self.next_tok();
         }
 
-        let let_stmt = ast::LetStatement {
+        Ok(ast::LetStatement {
             stmt_token,
             name: stmt_name,
             value: value,
-        };
-
-        Ok(Statement::LetStmt(let_stmt))
+        }
+        .into())
     }
 
     fn parse_return_stmt(&mut self) -> Result<Statement, ParseError> {
@@ -160,12 +159,11 @@ impl<'a> Parser<'a> {
             self.next_tok();
         }
 
-        let ret_stmt = ast::ReturnStatement {
+        Ok(ast::ReturnStatement {
             stmt_token: token,
             return_value: Box::new(stmt_value),
-        };
-
-        Ok(Statement::RetStmt(ret_stmt))
+        }
+        .into())
     }
 
     fn parse_expression_stmt(&mut self) -> Result<Statement, ParseError> {
@@ -175,10 +173,11 @@ impl<'a> Parser<'a> {
             self.next_tok();
         }
 
-        Ok(Statement::ExpStmt(ast::ExpressionStatement {
+        Ok(ast::ExpressionStatement {
             stmt_token: exp_tok,
             expression: express,
-        }))
+        }
+        .into())
     }
 
     fn append_errors(&mut self, error: ParseError) {
@@ -263,18 +262,19 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_identifier(&self) -> Result<Expression, ParseError> {
-        let value = self.cur_token.tok_literal.clone();
-        let token = self.cur_token.clone();
-        let ident_exp = ast::Identifier { token, value };
-        Ok(Expression::Identifier(ident_exp))
+        Ok(ast::Identifier {
+            token: self.cur_token.clone(),
+            value: self.cur_token.tok_literal.clone(),
+        }
+        .into())
     }
 
     fn parse_boolean(&self) -> Result<Expression, ParseError> {
-        let bool_lit = ast::Boolean {
+        Ok(ast::Boolean {
             token: self.cur_token.clone(),
             value: self.cur_tok_is(TType::TRUE),
-        };
-        Ok(Expression::BoolLit(bool_lit))
+        }
+        .into())
     }
 
     fn parse_integer_literal(&self) -> Result<Expression, ParseError> {
@@ -284,18 +284,19 @@ impl<'a> Parser<'a> {
             .parse()
             .map_err(|_| ParseError::IntLitParseError(int_token.tok_literal.clone()))?;
 
-        Ok(Expression::IntLit(ast::IntegerLiteral {
+        Ok(ast::IntegerLiteral {
             token: int_token,
             value,
-        }))
+        }
+        .into())
     }
 
     fn parse_string_literal(&self) -> Result<Expression, ParseError> {
-        let string_lit = ast::StringLiteral {
+        Ok(ast::StringLiteral {
             token: self.cur_token.clone(),
             value: self.cur_token.clone().tok_literal,
-        };
-        Ok(Expression::StringLit(string_lit))
+        }
+        .into())
     }
 
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
@@ -305,11 +306,12 @@ impl<'a> Parser<'a> {
         self.next_tok();
         let right = self.parse_expression(Precedent::PREFIX)?;
 
-        Ok(Expression::PreExp(Rc::new(ast::PrefixExpression {
+        Ok(ast::PrefixExpression {
             token,
             operator: literal,
             right: right,
-        })))
+        }
+        .into())
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
@@ -320,12 +322,13 @@ impl<'a> Parser<'a> {
         self.next_tok();
         let right = self.parse_expression(precedence)?;
 
-        Ok(Expression::InExp(Rc::new(ast::InfixExpression {
+        Ok(ast::InfixExpression {
             token,
             operator: literal,
             left,
             right,
-        })))
+        }
+        .into())
     }
 
     fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
@@ -373,12 +376,13 @@ impl<'a> Parser<'a> {
             );
         }
 
-        Ok(Expression::IfExp(Rc::new(ast::IfExpression {
+        Ok(ast::IfExpression {
             token: tok,
             condition: condition,
             consequence,
             alternative,
-        })))
+        }
+        .into())
     }
 
     fn parse_block_statement(&mut self) -> Result<Rc<Statement>, ParseError> {
@@ -392,10 +396,13 @@ impl<'a> Parser<'a> {
             self.next_tok()
         }
 
-        Ok(Rc::new(Statement::BlcStmt(ast::BlockStatement {
-            token: tok,
-            statements,
-        })))
+        Ok(Rc::new(
+            ast::BlockStatement {
+                token: tok,
+                statements,
+            }
+            .into(),
+        ))
     }
 
     fn parse_function_literal(&mut self) -> Result<Expression, ParseError> {
@@ -417,11 +424,12 @@ impl<'a> Parser<'a> {
             .parse_block_statement()
             .map_err(|_e| ParseError::ParsingError)?;
 
-        Ok(Expression::FncLit(Rc::new(ast::FunctionLiteral {
+        Ok(ast::FunctionLiteral {
             token,
             parameters,
             body,
-        })))
+        }
+        .into())
     }
 
     fn parse_function_parameters(&mut self) -> Result<Vec<Expression>, ParseError> {
@@ -437,7 +445,7 @@ impl<'a> Parser<'a> {
             token: self.cur_token.clone(),
             value: self.cur_token.clone().tok_literal,
         };
-        identifiers.push(Expression::Identifier(ident));
+        identifiers.push(ident.into());
 
         while self.peek_tok_is(TType::COMMA).is_some() {
             self.next_tok();
@@ -446,7 +454,7 @@ impl<'a> Parser<'a> {
                 token: self.cur_token.clone(),
                 value: self.cur_token.clone().tok_literal,
             };
-            identifiers.push(Expression::Identifier(ident));
+            identifiers.push(ident.into());
         }
 
         if self.expect_peek(TType::RPAREN).is_none() {
@@ -473,10 +481,11 @@ impl<'a> Parser<'a> {
     fn parse_array_literal(&mut self) -> Result<Expression, ParseError> {
         let elements = self.parse_expression_list(TType::RBRACKET)?;
 
-        Ok(Expression::ArrayExp(Rc::new(ast::ArrayExpression {
+        Ok(ast::ArrayExpression {
             token: self.cur_token.clone(),
             elements,
-        })))
+        }
+        .into())
     }
 
     fn parse_expression_list(&mut self, end: TType) -> Result<Vec<Expression>, ParseError> {

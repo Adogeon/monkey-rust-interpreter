@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::{Node, Program, Statement};
+use crate::ast::{Node, Statement};
 use crate::lexer::Lexer;
 
 fn test_let_statement(stmt: &Statement, name: String) -> Result<(), String> {
