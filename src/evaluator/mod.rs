@@ -110,7 +110,13 @@ impl Evaluable for Expression {
                 apply_function(function, args)
             }
             Expression::StringLit(str_lit) => Object::STRING(str_lit.value.clone()),
-            Expression::ArrayExp(array_exp) => todo!(),
+            Expression::ArrayExp(array_exp) => {
+                let elements = eval_expressions(array_exp.elements.clone(), env);
+                if elements.len() == 1 && is_error(&elements[0]) {
+                    return elements[0].clone();
+                }
+                Object::ARRAY(elements)
+            }
             Expression::IndexExp(index_expression) => todo!(),
         }
     }

@@ -350,3 +350,26 @@ fn test_builtin_functions() -> Result<(), String> {
     }
     Ok(())
 }
+
+#[test]
+fn test_array_literals() -> Result<(), String> {
+    let input = "[1, 2*2, 3 + 3]";
+    let eval = test_eval(input)?;
+
+    if let Object::ARRAY(result) = eval {
+        assert_eq!(
+            result.len(),
+            3,
+            "array has wrong number of elements, got {}",
+            result.len()
+        );
+
+        test_integer_object(&result[0], 1)?;
+        test_integer_object(&result[1], 4)?;
+        test_integer_object(&result[2], 6)?;
+
+        Ok(())
+    } else {
+        return Err(format!("Object is not array, got {}", eval.ob_type()));
+    }
+}

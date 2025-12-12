@@ -49,6 +49,7 @@ pub enum Object {
     FUNCTION(Rc<Function>),
     BUILTIN(Rc<Builtin>),
     ERROR(String),
+    ARRAY(Vec<Object>),
     NULL,
 }
 
@@ -73,6 +74,16 @@ impl Object {
                 buffer
             }
             Self::BUILTIN(_) => String::from("Builtin function"),
+            Self::ARRAY(val) => {
+                let mut buffer = String::new();
+                let el_list = val
+                    .iter()
+                    .map(|v| v.inspect())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(buffer, "[ {} ]", el_list).unwrap();
+                buffer
+            }
             Self::NULL => String::from("null"),
         }
     }
@@ -86,6 +97,7 @@ impl Object {
             Self::ERROR(_) => "ERROR",
             Self::FUNCTION(_) => "FUNCTION",
             Self::BUILTIN(_) => "BUILTIN_FN",
+            Self::ARRAY(_) => "ARRAY",
             Self::NULL => "NULL",
         }
     }
