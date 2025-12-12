@@ -373,3 +373,32 @@ fn test_array_literals() -> Result<(), String> {
         return Err(format!("Object is not array, got {}", eval.ob_type()));
     }
 }
+
+#[test]
+fn test_array_index_expressions() -> Result<(), String> {
+    let test_cases = vec![
+        ("[1,2,3][0]", "1"),
+        ("[1,2,3][1]", "2"),
+        ("[1,2,3][2]", "3"),
+        ("let i = 0; [1][i]", "1"),
+        ("[1,2,3][1+1]", "3"),
+        ("let myArray=[1,2,3]; myArray[2];", "3"),
+        (
+            "let myArray=[1,2,3]; myArray[0] + myArray[1] + myArray[2];",
+            "6",
+        ),
+        ("let myArray=[1,2,3];let i=myArray[0]; myArray[i];", "2"),
+        ("[1,2,3][3]", "null"),
+        ("[1,2,3][-1]", "null"),
+    ];
+
+    for (input, expect) in test_cases {
+        let eval = test_eval(input)?;
+        expect.parse::<i64>().map_or_else(
+            |_e| test_null_object(&eval),
+            |v| test_integer_object(&eval, v),
+        )?;
+    }
+
+    Ok(())
+}

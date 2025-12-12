@@ -117,8 +117,46 @@ impl Evaluable for Expression {
                 }
                 Object::ARRAY(elements)
             }
-            Expression::IndexExp(index_expression) => todo!(),
+            Expression::IndexExp(index_expression) => {
+                let left = eval(&*index_expression.left, env.clone());
+                if is_error(&left) {
+                    return left;
+                }
+                let index = eval(&index_expression.index, env);
+                if is_error(&index) {
+                    return index;
+                }
+                eval_index_expression(left, index)
+            }
         }
+    }
+}
+
+fn eval_index_expression(left: Object, index: Object) -> Object {
+    if matches!(left, Object::ARRAY(_)) && matches!(index, Object::INTEGER(_)) {
+        eval_array_index_expression(left, index)
+    } else {
+        new_error(format!("index operator not supported: {}", left.ob_type()))
+    }
+}
+
+fn eval_array_index_expression(arr: Object, i: Object) -> Object {
+    let array_object: Vec<Object> = match arr {
+        Object::ARRAY(elements) => elements,
+        _ => [].to_vec(),
+    };
+
+    let index: usize = match i {
+        Object::INTEGER(i) => match i.try_into() {
+            Ok(v) => v,
+            Err(_) => return Object::NULL,
+        },
+        _ => return Object::NULL,
+    };
+
+    match array_object.get(index) {
+        Some(v) => v.clone(),
+        None => Object::NULL,
     }
 }
 
