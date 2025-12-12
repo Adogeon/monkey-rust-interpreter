@@ -111,6 +111,7 @@ impl Evaluable for Expression {
             }
             Expression::StringLit(str_lit) => Object::STRING(str_lit.value.clone()),
             Expression::ArrayExp(array_exp) => todo!(),
+            Expression::IndexExp(index_expression) => todo!(),
         }
     }
 }

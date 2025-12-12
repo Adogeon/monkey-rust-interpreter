@@ -13,6 +13,7 @@ enum Precedent {
     PRODUCT = 4,
     PREFIX = 5,
     CALL = 6,
+    INDEX = 7,
 }
 
 fn tok_preceden_look_up(tok_type: TType) -> Precedent {
@@ -27,6 +28,7 @@ fn tok_preceden_look_up(tok_type: TType) -> Precedent {
         TType::ASTERISK => Precedent::PRODUCT,
         TType::ASSIGN => Precedent::PRODUCT,
         TType::LPAREN => Precedent::CALL,
+        TType::LBRACKET => Precedent::INDEX,
         _ => Precedent::LOWEST,
     }
 }
@@ -237,6 +239,7 @@ impl<'a> Parser<'a> {
                 | TType::LT
                 | TType::GT
                 | TType::LPAREN
+                | TType::LBRACKET
         )
     }
 
@@ -250,7 +253,8 @@ impl<'a> Parser<'a> {
                 self.next_tok();
                 let box_left = left_exp.take().unwrap();
                 let exp = match peek_tok {
-                    TType::LPAREN => self.parse_call_expression(Rc::new(*box_left))?,
+                    TType::LPAREN => self.parse_call_expression(*box_left)?,
+                    TType::LBRACKET => self.parse_index_expression(*box_left)?,
                     _ => self.parse_infix_expression(*box_left)?,
                 };
                 left_exp = Some(Box::new(exp));
@@ -464,18 +468,16 @@ impl<'a> Parser<'a> {
         Ok(identifiers)
     }
 
-    fn parse_call_expression(
-        &mut self,
-        function: Rc<Expression>,
-    ) -> Result<Expression, ParseError> {
+    fn parse_call_expression(&mut self, function: Expression) -> Result<Expression, ParseError> {
         let token = self.cur_token.clone();
         let arguments = self.parse_expression_list(TType::RPAREN)?;
 
-        Ok(Expression::CallExp(Rc::new(ast::CallExpression {
+        Ok(ast::CallExpression {
             token,
-            function,
+            function: function.clone().into(),
             arguments,
-        })))
+        }
+        .into())
     }
 
     fn parse_array_literal(&mut self) -> Result<Expression, ParseError> {
@@ -510,6 +512,21 @@ impl<'a> Parser<'a> {
             return Err(ParseError::MissingClosing(end));
         }
         Ok(list)
+    }
+
+    fn parse_index_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        let left = left.clone().into();
+
+        self.next_tok();
+
+        let index = self.parse_expression(Precedent::LOWEST)?;
+
+        if self.expect_peek(TType::RBRACKET).is_none() {
+            return Err(ParseError::MissingClosing(TType::RBRACKET));
+        }
+
+        Ok(ast::IndexExpression { token, left, index }.into())
     }
 }
 
