@@ -328,6 +328,7 @@ fn test_builtin_functions() -> Result<(), String> {
             "len(\"one\", \"two\")",
             "wrong number of arguments. got=2, want 1",
         ),
+        ("len([1,2,3])", "3"),
     ];
 
     for (input, expected) in test_cases {

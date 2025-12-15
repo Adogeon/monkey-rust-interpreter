@@ -15,13 +15,13 @@ pub fn builtins_fn(input: &str) -> Object {
                     ));
                 };
 
-                if let Object::STRING(str) = parameter[0].clone() {
-                    Object::INTEGER(str.len() as i64)
-                } else {
-                    new_error(format!(
+                match parameter[0].clone() {
+                    Object::ARRAY(arr) => Object::INTEGER(arr.len() as i64),
+                    Object::STRING(str) => Object::INTEGER(str.len() as i64),
+                    _ => new_error(format!(
                         "argument to `len` not supported, got={}",
                         parameter[0].ob_type()
-                    ))
+                    )),
                 }
             },
         })),
