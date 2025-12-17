@@ -1,23 +1,10 @@
 use crate::token::Token;
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::rc::Rc;
 
 pub trait Node: Display {
     fn token_literal(&self) -> Option<&str>;
-}
-
-pub struct EmptyValue;
-
-impl Node for EmptyValue {
-    fn token_literal(&self) -> Option<&str> {
-        Some("it's empty")
-    }
-}
-
-impl Display for EmptyValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "It's blank")
-    }
 }
 
 pub struct Program {
@@ -466,6 +453,35 @@ impl From<IndexExpression> for Expression {
     }
 }
 
+pub struct HashLiteral {
+    token: Token,
+    pairs: HashMap<Expression, Expression>,
+}
+
+impl Node for HashLiteral {
+    fn token_literal(&self) -> Option<&str> {
+        Some(&self.token.tok_literal)
+    }
+}
+
+impl Display for HashLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let pair_str = self
+            .pairs
+            .iter()
+            .map(|(k, v)| format!("{k}:{v}"))
+            .collect::<Vec<String>>()
+            .join(", ");
+        write!(f, "{{{}}}", pair_str)
+    }
+}
+
+impl From<HashLiteral> for Expression {
+    fn from(value: HashLiteral) -> Self {
+        Self::HashLit(Rc::new(value))
+    }
+}
+
 #[derive(Clone)]
 pub enum Expression {
     Identifier(Identifier),
@@ -479,6 +495,7 @@ pub enum Expression {
     CallExp(Rc<CallExpression>),
     ArrayExp(Rc<ArrayExpression>),
     IndexExp(Rc<IndexExpression>),
+    HashLit(Rc<HashLiteral>),
 }
 
 impl Expression {
@@ -495,6 +512,7 @@ impl Expression {
             Expression::CallExp(call_expression) => call_expression.as_ref(),
             Expression::ArrayExp(array_expression) => array_expression.as_ref(),
             Expression::IndexExp(index_expression) => index_expression.as_ref(),
+            Expression::HashLit(hash_literal) => hash_literal.as_ref(),
         }
     }
 }

@@ -128,6 +128,7 @@ impl Evaluable for Expression {
                 }
                 eval_index_expression(left, index)
             }
+            Expression::HashLit(hash_literal) => todo!(),
         }
     }
 }
