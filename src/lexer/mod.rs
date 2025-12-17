@@ -76,6 +76,7 @@ impl<'a> Lexer<'a> {
             Some('>') => Token::new(TType::GT, ">"),
             Some(',') => Token::new(TType::COMMA, ","),
             Some(';') => Token::new(TType::SEMICOLON, ";"),
+            Some(':') => Token::new(TType::COLON, ":"),
             Some('(') => Token::new(TType::LPAREN, "("),
             Some(')') => Token::new(TType::RPAREN, ")"),
             Some('{') => Token::new(TType::LBRACE, "{"),

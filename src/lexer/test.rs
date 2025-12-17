@@ -24,6 +24,7 @@ fn test_next_token() {
     \"foobar\"
     \"foo bar\"
     [1,2];
+    {\"foo\":\"bar\"}
     ";
 
     let expected_results = vec![
@@ -108,6 +109,11 @@ fn test_next_token() {
         (TType::INT, "2"),
         (TType::RBRACKET, "]"),
         (TType::SEMICOLON, ";"),
+        (TType::LBRACE, "{"),
+        (TType::STRING, "foo"),
+        (TType::COLON, ":"),
+        (TType::STRING, "bar"),
+        (TType::RBRACE, "}"),
         (TType::EOF, ""),
     ];
 
