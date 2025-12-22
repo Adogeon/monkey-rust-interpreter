@@ -454,8 +454,8 @@ impl From<IndexExpression> for Expression {
 }
 
 pub struct HashLiteral {
-    token: Token,
-    pairs: HashMap<Expression, Expression>,
+    pub token: Token,
+    pub pairs: HashMap<Expression, Expression>,
 }
 
 impl Node for HashLiteral {

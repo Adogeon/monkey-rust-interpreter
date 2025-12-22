@@ -1,6 +1,8 @@
 use super::*;
 use crate::ast::{Node, Statement};
 use crate::lexer::Lexer;
+use std::boxed::Box;
+use std::collections::HashMap;
 
 fn test_let_statement(stmt: &Statement, name: String) -> Result<(), String> {
     let stmt_literal = stmt.token_literal().unwrap_or("blank");
@@ -885,6 +887,148 @@ fn test_parsing_index_expression() -> Result<(), String> {
 
     test_identifier(&index_exp.left, "myArray".to_string())?;
     test_infix_expression(&index_exp.index, 1.into(), "+".to_string(), 1.into())?;
+
+    Ok(())
+}
+
+#[test]
+fn test_parsing_hash_literal_string_keys() -> Result<(), String> {
+    let input = "{\"one\": 1, \"two\": 2, \"three\": 3}";
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Parsing error:{err}"))?;
+
+    let harsh_lit = program
+        .statements
+        .get(0)
+        .ok_or("Can't find program staement at index 0")
+        .and_then(|stmt| match stmt.as_ref() {
+            Statement::ExpStmt(ex) => Ok(ex),
+            _ => Err("Statement is not an Expression Statement"),
+        })
+        .and_then(|exp_stmt| match &exp_stmt.expression {
+            Expression::HashLit(hl) => Ok(hl),
+            _ => Err("Expression is not a Hash Literal"),
+        })?;
+
+    assert_eq!(
+        3,
+        harsh_lit.pairs.len(),
+        "hash_lit.pairs has wrong length. got {}",
+        harsh_lit.pairs.len()
+    );
+
+    let expected: HashMap<&str, i64> = HashMap::from([("one", 1), ("two", 2), ("three", 3)]);
+
+    for (k, v) in &harsh_lit.pairs {
+        if let Expression::StringLit(key) = k {
+            match expected.get(key.value.as_str()) {
+                Some(expected_val) => test_integer_literal(&v, *expected_val)?,
+                None => return Err(format!("Can't find expected_val for key {}", key.value)),
+            }
+        } else {
+            return Err(format!("key is not a String Literal"));
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_parsing_empty_hash_literal() -> Result<(), String> {
+    let input = "{}";
+
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Parsing error:{err}"))?;
+
+    let hash_lit = program
+        .statements
+        .get(0)
+        .ok_or("Can't find statement at index 0")
+        .and_then(|stmt| match stmt.as_ref() {
+            Statement::ExpStmt(exp_sta) => Ok(exp_sta),
+            _ => Err("Statement is not an Expression Statement"),
+        })
+        .and_then(|exp_sta| match &exp_sta.expression {
+            Expression::HashLit(hl) => Ok(hl),
+            _ => Err("Expression is not an Hash Literal"),
+        })?;
+
+    assert_eq!(
+        0,
+        hash_lit.pairs.len(),
+        "Hash lit length is not 0, got={}",
+        hash_lit.pairs.len()
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_parsing_hash_liteals_with_expression() -> Result<(), String> {
+    let input = "{\"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5}";
+
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Parsing error:{err}"))?;
+
+    let hash_lit = program
+        .statements
+        .get(0)
+        .ok_or("Can't find statement at index 0")
+        .and_then(|stmt| match stmt.as_ref() {
+            Statement::ExpStmt(exp_sta) => Ok(exp_sta),
+            _ => Err("Statement is not an Expression Statement"),
+        })
+        .and_then(|exp_sta| match &exp_sta.expression {
+            Expression::HashLit(hl) => Ok(hl),
+            _ => Err("Expression is not an Hash Literal"),
+        })?;
+
+    assert_eq!(
+        3,
+        hash_lit.pairs.len(),
+        "hash_lit.pairs has wrong length. got {}",
+        hash_lit.pairs.len()
+    );
+
+    type TestFn = Box<dyn Fn(&Expression) -> Result<(), String>>;
+
+    let tests_fn_hash: HashMap<&str, TestFn> = HashMap::from([
+        (
+            "one",
+            Box::new(|e: &Expression| test_infix_expression(e, 0.into(), "+".into(), 1.into()))
+                as TestFn,
+        ),
+        (
+            "two",
+            Box::new(|e: &Expression| test_infix_expression(e, 10.into(), "-".into(), 8.into()))
+                as TestFn,
+        ),
+        (
+            "three",
+            Box::new(|e: &Expression| test_infix_expression(e, 15.into(), "/".into(), 5.into()))
+                as TestFn,
+        ),
+    ]);
+
+    for (k, v) in &hash_lit.pairs {
+        if let Expression::StringLit(key) = k {
+            match tests_fn_hash.get(key.value.as_str()) {
+                Some(test_fn) => test_fn(v)?,
+                None => return Err(format!("No test function found for key {}", key.value)),
+            }
+        } else {
+            return Err(format!("Key is not a StringLiteral. got {}", k));
+        }
+    }
 
     Ok(())
 }
