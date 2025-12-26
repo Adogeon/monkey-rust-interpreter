@@ -892,6 +892,96 @@ fn test_parsing_index_expression() -> Result<(), String> {
 }
 
 #[test]
+fn test_parsing_hash_literal_integer_keys() -> Result<(), String> {
+    let input = "{1: 10, 2: 6, 3: 7}";
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Parsing error:{err}"))?;
+
+    let harsh_lit = program
+        .statements
+        .get(0)
+        .ok_or("Can't find program staement at index 0")
+        .and_then(|stmt| match stmt.as_ref() {
+            Statement::ExpStmt(ex) => Ok(ex),
+            _ => Err("Statement is not an Expression Statement"),
+        })
+        .and_then(|exp_stmt| match &exp_stmt.expression {
+            Expression::HashLit(hl) => Ok(hl),
+            _ => Err("Expression is not a Hash Literal"),
+        })?;
+
+    assert_eq!(
+        3,
+        harsh_lit.pairs.len(),
+        "hash_lit.pairs has wrong length. got {}",
+        harsh_lit.pairs.len()
+    );
+
+    let expected: HashMap<i64, i64> = HashMap::from([(1, 10), (2, 6), (3, 7)]);
+
+    for (k, v) in &harsh_lit.pairs {
+        if let Expression::IntLit(key) = k {
+            match expected.get(&key.value) {
+                Some(expected_val) => test_integer_literal(v, *expected_val)?,
+                None => return Err(format!("Can't find expected_val for key {}", key.value)),
+            }
+        } else {
+            return Err(format!("key is not a Integer Literal"));
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_parsing_hash_literal_boolean_keys() -> Result<(), String> {
+    let input = "{true: 10, false: 6}";
+    let l = Lexer::new(input);
+    let mut p = Parser::new(l);
+    let program = p
+        .parse_program()
+        .map_err(|err| format!("Parsing error:{err}"))?;
+
+    let harsh_lit = program
+        .statements
+        .get(0)
+        .ok_or("Can't find program staement at index 0")
+        .and_then(|stmt| match stmt.as_ref() {
+            Statement::ExpStmt(ex) => Ok(ex),
+            _ => Err("Statement is not an Expression Statement"),
+        })
+        .and_then(|exp_stmt| match &exp_stmt.expression {
+            Expression::HashLit(hl) => Ok(hl),
+            _ => Err("Expression is not a Hash Literal"),
+        })?;
+
+    assert_eq!(
+        3,
+        harsh_lit.pairs.len(),
+        "hash_lit.pairs has wrong length. got {}",
+        harsh_lit.pairs.len()
+    );
+
+    let expected: HashMap<bool, i64> = HashMap::from([(true, 10), (false, 6)]);
+
+    for (k, v) in &harsh_lit.pairs {
+        if let Expression::BoolLit(key) = k {
+            match expected.get(&key.value) {
+                Some(expected_val) => test_integer_literal(v, *expected_val)?,
+                None => return Err(format!("Can't find expected_val for key {}", key.value)),
+            }
+        } else {
+            return Err(format!("key is not a Integer Literal"));
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
 fn test_parsing_hash_literal_string_keys() -> Result<(), String> {
     let input = "{\"one\": 1, \"two\": 2, \"three\": 3}";
     let l = Lexer::new(input);
