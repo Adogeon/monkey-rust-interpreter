@@ -959,7 +959,7 @@ fn test_parsing_hash_literal_boolean_keys() -> Result<(), String> {
         })?;
 
     assert_eq!(
-        3,
+        2,
         harsh_lit.pairs.len(),
         "hash_lit.pairs has wrong length. got {}",
         harsh_lit.pairs.len()

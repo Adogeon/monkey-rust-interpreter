@@ -223,6 +223,7 @@ impl<'a> Parser<'a> {
             TType::IF => self.parse_if_expression(),
             TType::FUNCTION => self.parse_function_literal(),
             TType::LBRACKET => self.parse_array_literal(),
+            TType::LBRACE => self.parse_harsh_literal(),
             _ => Err(ParseError::NoPrefixParseFnError(tok_type)),
         }
     }
@@ -527,6 +528,36 @@ impl<'a> Parser<'a> {
         }
 
         Ok(ast::IndexExpression { token, left, index }.into())
+    }
+
+    fn parse_harsh_literal(&mut self) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        let mut pairs: Vec<(Expression, Expression)> = Vec::new();
+
+        while self.peek_tok_is(TType::RBRACE).is_none() {
+            self.next_tok();
+            let key = self.parse_expression(Precedent::LOWEST)?;
+
+            if self.expect_peek(TType::COLON).is_none() {
+                return Err(ParseError::MissingClosing(TType::COLON));
+            }
+
+            self.next_tok();
+            let value = self.parse_expression(Precedent::LOWEST)?;
+            pairs.push((key, value));
+
+            if self.peek_tok_is(TType::RBRACE).is_none() && self.expect_peek(TType::COMMA).is_none()
+            {
+                return Err(ParseError::MissingExpectedToken(TType::COMMA));
+            }
+        }
+
+        if self.expect_peek(TType::RBRACE).is_none() {
+            return Err(ParseError::MissingClosing(TType::RBRACE));
+        }
+
+        self.next_tok();
+        Ok(ast::HashLiteral { token, pairs }.into())
     }
 }
 
