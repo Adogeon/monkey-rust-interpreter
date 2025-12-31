@@ -40,6 +40,26 @@ impl PartialEq for Builtin {
         true
     }
 }
+
+#[derive(PartialEq, Eq, Hash)]
+enum HashKey {
+    INTEGER(i64),
+    STRING(String),
+    BOOLEAN(bool),
+}
+
+impl TryFrom<Object> for HashKey {
+    type Error = ();
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value {
+            Object::INTEGER(val) => Ok(HashKey::INTEGER(val)),
+            Object::STRING(val) => Ok(HashKey::STRING(val)),
+            Object::BOOLEAN(val) => Ok(HashKey::BOOLEAN(val)),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(PartialEq, Clone)]
 pub enum Object {
     INTEGER(i64),
