@@ -1,10 +1,13 @@
 use crate::ast::{Identifier, Statement};
 use environment::Env;
+use hash::{HashKey, HashPair};
+use std::collections::HashMap;
 use std::fmt::{Display, Write};
 use std::rc::Rc;
 
 pub mod builtins;
 pub mod environment;
+pub mod hash;
 
 pub fn new_error(msg: String) -> Object {
     Object::ERROR(msg)
@@ -41,22 +44,17 @@ impl PartialEq for Builtin {
     }
 }
 
-#[derive(PartialEq, Eq, Hash)]
-enum HashKey {
-    INTEGER(i64),
-    STRING(String),
-    BOOLEAN(bool),
+pub struct HashObject {
+    pub pair: HashMap<HashKey, HashPair>,
 }
 
-impl TryFrom<Object> for HashKey {
-    type Error = ();
-    fn try_from(value: Object) -> Result<Self, Self::Error> {
-        match value {
-            Object::INTEGER(val) => Ok(HashKey::INTEGER(val)),
-            Object::STRING(val) => Ok(HashKey::STRING(val)),
-            Object::BOOLEAN(val) => Ok(HashKey::BOOLEAN(val)),
-            _ => Err(()),
-        }
+impl PartialEq for HashObject {
+    fn eq(&self, _other: &Self) -> bool {
+        false
+    }
+
+    fn ne(&self, _other: &Self) -> bool {
+        true
     }
 }
 
@@ -70,6 +68,7 @@ pub enum Object {
     BUILTIN(Rc<Builtin>),
     ERROR(String),
     ARRAY(Vec<Object>),
+    HASH(Rc<HashObject>),
     NULL,
 }
 
@@ -101,7 +100,18 @@ impl Object {
                     .map(|v| v.inspect())
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(buffer, "[ {} ]", el_list).unwrap();
+                write!(buffer, "[ {} ]", el_list).expect("Can't inspect array");
+                buffer
+            }
+            Self::HASH(hash_obj) => {
+                let mut buffer = String::new();
+                let hash_list = hash_obj
+                    .pair
+                    .iter()
+                    .map(|(_k, v)| format!("{}: {}", v.key.inspect(), v.value.inspect()))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(buffer, "[ {} ]", hash_list).expect("Can't inspect hash");
                 buffer
             }
             Self::NULL => String::from("null"),
@@ -118,6 +128,7 @@ impl Object {
             Self::FUNCTION(_) => "FUNCTION",
             Self::BUILTIN(_) => "BUILTIN_FN",
             Self::ARRAY(_) => "ARRAY",
+            Self::HASH(_) => "HASH_OBJECT",
             Self::NULL => "NULL",
         }
     }
