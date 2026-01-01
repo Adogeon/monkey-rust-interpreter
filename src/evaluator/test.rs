@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use super::*;
+use crate::object::hash::HashKey;
 use crate::object::Object;
 use crate::{lexer::Lexer, parser::Parser};
 
@@ -401,5 +404,45 @@ fn test_array_index_expressions() -> Result<(), String> {
         )?;
     }
 
+    Ok(())
+}
+
+#[test]
+fn test_hash_literals() -> Result<(), String> {
+    let input = "let two = \"two\";
+            {
+                \"one\": 10 - 9,
+                two: 1 + 1,
+                \"thr\" + \"ee\": 6/2,
+                4: 4,
+                true: 5,
+                false, 6,
+            }
+        ";
+    let eval = test_eval(input)?;
+
+    if let Object::HASH(val) = eval {
+        let expected: HashMap<HashKey, i64> = HashMap::from([
+            (HashKey::new(Object::STRING("one".to_string())).unwrap(), 1),
+            (HashKey::new(Object::STRING("two".to_string())).unwrap(), 2),
+            (
+                HashKey::new(Object::STRING("three".to_string())).unwrap(),
+                3,
+            ),
+            (HashKey::new(Object::INTEGER(4)).unwrap(), 4),
+            (HashKey::new(Object::BOOLEAN(true)).unwrap(), 5),
+            (HashKey::new(Object::BOOLEAN(false)).unwrap(), 6),
+        ]);
+
+        assert_eq!(val.pairs.len(), expected.len());
+        for (expected_key, expected_val) in expected {
+            match val.pairs.get(&expected_key) {
+                Some(v) => test_integer_object(&v.value, expected_val)?,
+                None => return Err(format!("no pair for given key {:?} in Pairs", expected_key)),
+            }
+        }
+    } else {
+        return Err(format!("eval didn't return hash. got {}", eval.ob_type()));
+    }
     Ok(())
 }

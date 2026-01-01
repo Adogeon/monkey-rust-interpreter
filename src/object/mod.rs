@@ -45,7 +45,7 @@ impl PartialEq for Builtin {
 }
 
 pub struct HashObject {
-    pub pair: HashMap<HashKey, HashPair>,
+    pub pairs: HashMap<HashKey, HashPair>,
 }
 
 impl PartialEq for HashObject {
@@ -106,7 +106,7 @@ impl Object {
             Self::HASH(hash_obj) => {
                 let mut buffer = String::new();
                 let hash_list = hash_obj
-                    .pair
+                    .pairs
                     .iter()
                     .map(|(_k, v)| format!("{}: {}", v.key.inspect(), v.value.inspect()))
                     .collect::<Vec<String>>()
