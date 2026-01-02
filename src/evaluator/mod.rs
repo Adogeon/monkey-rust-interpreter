@@ -1,7 +1,9 @@
-use crate::ast::{BlockStatement, Expression, Program, Statement};
+use crate::ast::{BlockStatement, Expression, HashLiteral, Program, Statement};
 use crate::object::builtins::builtins_fn;
 use crate::object::environment::{Env, Environment};
-use crate::object::{new_error, Function, Object};
+use crate::object::hash::{HashKey, HashPair};
+use crate::object::{new_error, Function, HashObject, Object};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 const TRUE: Object = Object::BOOLEAN(true);
@@ -128,9 +130,32 @@ impl Evaluable for Expression {
                 }
                 eval_index_expression(left, index)
             }
-            Expression::HashLit(hash_literal) => todo!(),
+            Expression::HashLit(hash_literal) => eval_hash_literal(hash_literal, env.clone()),
         }
     }
+}
+
+fn eval_hash_literal(hash_literal: &HashLiteral, env: Env) -> Object {
+    let mut pairs = HashMap::new();
+    for (key_node, value_node) in &hash_literal.pairs {
+        let key = eval(key_node, env.clone());
+        if is_error(&key) {
+            return key;
+        }
+        let hash_key = match HashKey::new(key.clone()) {
+            Ok(v) => v,
+            Err(e) => return new_error(e),
+        };
+
+        let value = eval(value_node, env.clone());
+        if is_error(&value) {
+            return value;
+        }
+
+        pairs.insert(hash_key, HashPair { key, value });
+    }
+
+    Object::HASH(Rc::new(HashObject { pairs }))
 }
 
 fn eval_index_expression(left: Object, index: Object) -> Object {

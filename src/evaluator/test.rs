@@ -416,7 +416,7 @@ fn test_hash_literals() -> Result<(), String> {
                 \"thr\" + \"ee\": 6/2,
                 4: 4,
                 true: 5,
-                false, 6,
+                false: 6,
             }
         ";
     let eval = test_eval(input)?;
