@@ -161,8 +161,27 @@ fn eval_hash_literal(hash_literal: &HashLiteral, env: Env) -> Object {
 fn eval_index_expression(left: Object, index: Object) -> Object {
     if matches!(left, Object::ARRAY(_)) && matches!(index, Object::INTEGER(_)) {
         eval_array_index_expression(left, index)
+    } else if matches!(left, Object::HASH(_)) {
+        eval_hash_index_expression(left, index)
     } else {
         new_error(format!("index operator not supported: {}", left.ob_type()))
+    }
+}
+
+fn eval_hash_index_expression(left: Object, index: Object) -> Object {
+    let hash_object = if let Object::HASH(v) = left {
+        v
+    } else {
+        return new_error("Left is not a hash object".to_string());
+    };
+    let key = match HashKey::new(index.clone()) {
+        Ok(v) => v,
+        Err(_e) => return new_error(format!("unsuable as hash key: {}", index.ob_type())),
+    };
+
+    match hash_object.pairs.get(&key) {
+        Some(v) => v.value.clone(),
+        None => Object::NULL,
     }
 }
 

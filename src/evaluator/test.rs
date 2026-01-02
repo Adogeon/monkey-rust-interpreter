@@ -196,6 +196,10 @@ fn test_error_handling() -> Result<(), String> {
             "\"Hello\" - \"World!\"",
             "unknown operator: STRING - STRING",
         ),
+        (
+            "{\"name\":\"Monkey\"}[fn(x) {x}];",
+            "unusable as hash key: FUNCTION",
+        ),
     ];
 
     for (input, expected) in test_cases {
@@ -444,5 +448,28 @@ fn test_hash_literals() -> Result<(), String> {
     } else {
         return Err(format!("eval didn't return hash. got {}", eval.ob_type()));
     }
+    Ok(())
+}
+
+#[test]
+fn test_hash_index_expression() -> Result<(), String> {
+    let test_cases = vec![
+        ("{\"foo\": 5}[\"foo\"]", "5"),
+        ("{\"foo\": 5}[\"bar\"]", "null"),
+        ("let key = \"foo\";{\"foo\": 5}[key]", "5"),
+        ("{}[\"foo\"]", "null"),
+        ("{5:5}[5]", "5"),
+        ("{true: 5}[true]", "5"),
+        ("{false:5}[false]", "5"),
+    ];
+
+    for (input, expected) in test_cases {
+        let eval = test_eval(input)?;
+        expected.parse::<i64>().map_or_else(
+            |_e| test_null_object(&eval),
+            |v| test_integer_object(&eval, v),
+        )?;
+    }
+
     Ok(())
 }
