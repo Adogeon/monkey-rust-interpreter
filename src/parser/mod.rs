@@ -556,7 +556,6 @@ impl<'a> Parser<'a> {
             return Err(ParseError::MissingClosing(TType::RBRACE));
         }
 
-        self.next_tok();
         Ok(ast::HashLiteral { token, pairs }.into())
     }
 }

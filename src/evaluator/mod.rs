@@ -176,7 +176,7 @@ fn eval_hash_index_expression(left: Object, index: Object) -> Object {
     };
     let key = match HashKey::new(index.clone()) {
         Ok(v) => v,
-        Err(_e) => return new_error(format!("unsuable as hash key: {}", index.ob_type())),
+        Err(_e) => return new_error(format!("unusable as hash key: {}", index.ob_type())),
     };
 
     match hash_object.pairs.get(&key) {

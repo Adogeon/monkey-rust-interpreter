@@ -197,7 +197,7 @@ fn test_error_handling() -> Result<(), String> {
             "unknown operator: STRING - STRING",
         ),
         (
-            "{\"name\":\"Monkey\"}[fn(x) {x}];",
+            "{\"name\":\"Monkey\"}[fn(x) {x}]",
             "unusable as hash key: FUNCTION",
         ),
     ];
